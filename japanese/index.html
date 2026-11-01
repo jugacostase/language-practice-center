@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#b8322a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Kanji SRS">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Kanji SRS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f5f0; --panel:#ffffff; --ink:#1d1d1f; --muted:#6b6b72; --line:#e4e1d9;
+  --accent:#b8322a; --new:#2f6fd6; --learn:#d0582a; --due:#2e8b57;
+  --again:#c0392b; --hard:#8a6d3b; --good:#2e8b57; --easy:#2f6fd6;
+  --tile-new:#ecebe6; --tile-learn:#f6d3b8; --tile-young:#cfe9d6; --tile-mature:#7cc49a;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#16161a; --panel:#1f1f25; --ink:#ececf1; --muted:#9a9aa5; --line:#2e2e36;
+    --accent:#e0675e; --new:#6aa0ff; --learn:#ff9a62; --due:#5fcf8e;
+    --again:#e0675e; --hard:#c9a46a; --good:#5fcf8e; --easy:#6aa0ff;
+    --tile-new:#2a2a31; --tile-learn:#5a3a26; --tile-young:#24452f; --tile-mature:#2f7a4c;
+    --shadow:none;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans JP",system-ui,-apple-system,Segoe UI,sans-serif;}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{max-width:760px;margin:0 auto;padding:16px 16px 48px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+header h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.01em}
+header h1 span{color:var(--accent);font-family:"Noto Serif JP",serif}
+nav{margin-left:auto;display:flex;gap:4px}
+nav button{background:none;border:1px solid transparent;border-radius:8px;padding:6px 10px;color:var(--muted)}
+nav button.on{border-color:var(--line);background:var(--panel);color:var(--ink)}
+.sync{font-size:12px;color:var(--muted);margin-left:8px;white-space:nowrap}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stat b{display:block;font-size:22px}
+.stat small{color:var(--muted);font-size:12px}
+.decks{display:flex;flex-direction:column;gap:8px}
+.deck{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.deck .name{font-weight:600}
+.deck .desc{font-size:13px;color:var(--muted)}
+.counts{margin-left:auto;display:flex;gap:12px;font-variant-numeric:tabular-nums;font-weight:600}
+.c-new{color:var(--new)} .c-learn{color:var(--learn)} .c-due{color:var(--due)}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 14px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn:disabled{opacity:.45;cursor:default}
+.big{display:block;width:100%;padding:14px;font-size:17px;margin:16px 0}
+.hint{color:var(--muted);font-size:13px}
+/* study */
+.studybar{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.card{min-height:360px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 20px;position:relative}
+.tag{position:absolute;top:12px;left:14px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.speak{position:absolute;top:8px;right:10px;border:none;background:none;font-size:18px;color:var(--muted);padding:6px}
+.kanji-big{font-family:"Noto Serif JP",serif;font-size:128px;line-height:1.1;font-weight:500}
+.word-big{font-family:"Noto Serif JP",serif;font-size:64px;line-height:1.2;font-weight:500}
+.prompt{font-size:30px;font-weight:600}
+.sub{color:var(--muted);margin-top:8px}
+hr.div{width:100%;border:none;border-top:1px dashed var(--line);margin:20px 0}
+.meaning{font-size:26px;font-weight:600}
+.reading{font-size:28px;font-family:"Noto Sans JP",sans-serif}
+.readings{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin-top:12px;text-align:left;font-size:17px}
+.readings dt{color:var(--muted);font-size:13px;padding-top:3px}
+.readings dd{margin:0}
+.examples{margin-top:16px;width:100%;max-width:440px;text-align:left}
+.ex{display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line);font-size:16px}
+.ex:last-child{border-bottom:none}
+.ex .w{font-family:"Noto Serif JP",serif;font-size:20px;min-width:96px}
+.ex .r{color:var(--muted);min-width:110px}
+.ex .lock{font-size:11px;color:var(--muted);margin-left:auto}
+.breakdown{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.bk{border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px}
+.bk span{font-family:"Noto Serif JP",serif;font-size:22px;display:block}
+.answer{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.answer button{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 4px;font-weight:600}
+.answer button small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:2px}
+.answer .a{color:var(--again)} .answer .h{color:var(--hard)} .answer .g{color:var(--good)} .answer .e{color:var(--easy)}
+.kbd{font-size:11px;color:var(--muted)}
+.ask{margin-top:12px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.ask label{grid-column:1/-1;font-weight:700;font-size:15px}
+.ask label span{font-weight:400;color:var(--muted);font-size:13px;margin-left:6px}
+.ask input{font:inherit;font-size:22px;padding:12px 14px;border-radius:12px;border:2px solid var(--line);background:var(--panel);color:var(--ink);text-align:center;min-width:0}
+.ask.reading input{border-color:var(--new)} .ask.meaning input{border-color:var(--accent)}
+.ask .btn{height:100%;padding:0 18px;font-size:16px}
+.ask .warn{grid-column:1/-1;color:var(--again);font-size:13px;min-height:16px}
+.linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:13px;padding:0}
+.ask .linkbtn{grid-column:1/-1;justify-self:center}
+.results{display:flex;flex-direction:column;gap:6px;margin-top:16px;width:100%;max-width:440px}
+.res{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:8px 12px;border-radius:10px;font-size:16px;text-align:left}
+.res.ok{background:color-mix(in srgb,var(--good) 14%,transparent)} .res.bad{background:color-mix(in srgb,var(--again) 14%,transparent)}
+.res .qk{font-size:12px;color:var(--muted);min-width:56px;text-transform:uppercase;letter-spacing:.06em}
+.res .given{font-weight:600} .res.ok .mark{color:var(--good)} .res.bad .mark{color:var(--again)}
+.res .exp{color:var(--muted);font-size:14px;margin-left:auto}
+.answer button.sug{outline:2px solid currentColor;outline-offset:-2px}
+
+.done{text-align:center;padding:48px 16px}
+.done .kanji-big{font-size:72px}
+/* browse */
+.legend{display:flex;gap:12px;font-size:12px;color:var(--muted);margin:8px 0 12px;flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px}
+.tile{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:"Noto Serif JP",serif;font-size:28px;background:var(--tile-new)}
+.tile.learn{background:var(--tile-learn)} .tile.young{background:var(--tile-young)} .tile.mature{background:var(--tile-mature)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal{max-width:520px;width:100%;max-height:90vh;overflow:auto;position:relative;text-align:center}
+.modal .close{position:absolute;top:8px;right:8px;border:none;background:none;font-size:20px;color:var(--muted)}
+.cardstats{font-size:12px;color:var(--muted);margin-top:12px}
+/* settings */
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.row label{flex:1}
+.row input[type=number]{width:72px;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea{width:100%;min-height:120px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:ui-monospace,monospace;font-size:12px;padding:8px}
+h2{font-size:15px;margin:20px 0 8px}
+.msg{font-size:13px;color:var(--muted);min-height:18px;margin-top:6px}
+.wrap{padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(48px,env(safe-area-inset-bottom))}
+.banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;margin-bottom:12px;border-color:var(--learn)}
+.banner .t{flex:1;min-width:200px;font-size:14px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+.snaps{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.snaps .snap{display:flex;align-items:center;gap:8px;font-size:13px}
+.snaps .snap span{flex:1}
+code{font-size:12px}
+select{font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+@media (max-width:560px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .kanji-big{font-size:104px}
+  .word-big{font-size:48px}
+  .deck{flex-wrap:wrap}
+  nav button{padding:6px 8px}
+  .sync{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span>漢字</span> SRS</h1>
+    <span class="sync" id="sync">Saved on this device</span>
+    <nav>
+      <button data-view="home" class="on">Decks</button>
+      <button data-view="browse">Browse</button>
+      <button data-view="settings">Settings</button>
+    </nav>
+  </header>
+  <main id="main"></main>
+</div>
+<div id="modal-root"></div>
+
+<script>
+/* ============================== DATA ==============================
+   kanji | meaning | on'yomi | kun'yomi | examples (word:reading:meaning;...)
+   Ordered for learning: numbers → calendar → people → body/nature → position → adjectives → verbs → places.
+*/
+const KANJI_RAW = `
+一|one|イチ、イツ|ひと、ひと(つ)|一つ:ひとつ:one (thing);一人:ひとり:one person; alone;一月:いちがつ:January
+二|two|ニ|ふた、ふた(つ)|二つ:ふたつ:two (things);二人:ふたり:two people;二月:にがつ:February
+三|three|サン|み、みっ(つ)|三つ:みっつ:three (things);三月:さんがつ:March;三人:さんにん:three people
+四|four|シ|よ、よん、よっ(つ)|四つ:よっつ:four (things);四月:しがつ:April;四人:よにん:four people
+五|five|ゴ|いつ、いつ(つ)|五つ:いつつ:five (things);五月:ごがつ:May
+六|six|ロク|むっ(つ)|六つ:むっつ:six (things);六月:ろくがつ:June
+七|seven|シチ|なな、なな(つ)|七つ:ななつ:seven (things);七月:しちがつ:July
+八|eight|ハチ|やっ(つ)|八つ:やっつ:eight (things);八月:はちがつ:August
+九|nine|キュウ、ク|ここの(つ)|九つ:ここのつ:nine (things);九月:くがつ:September
+十|ten|ジュウ、ジッ|とお|十:とお:ten (things);十月:じゅうがつ:October
+百|hundred|ヒャク||百円:ひゃくえん:100 yen;三百:さんびゃく:three hundred
+千|thousand|セン|ち|千円:せんえん:1,000 yen;三千:さんぜん:three thousand
+万|ten thousand|マン、バン||一万円:いちまんえん:10,000 yen
+円|yen; circle|エン|まる(い)|円:えん:yen;百円:ひゃくえん:100 yen
+日|day; sun|ニチ、ジツ|ひ、か|日曜日:にちようび:Sunday;毎日:まいにち:every day;今日:きょう:today
+月|month; moon|ゲツ、ガツ|つき|月曜日:げつようび:Monday;一月:いちがつ:January;毎月:まいつき:every month
+火|fire|カ|ひ|火曜日:かようび:Tuesday;火:ひ:fire;花火:はなび:fireworks
+水|water|スイ|みず|水:みず:water;水曜日:すいようび:Wednesday
+木|tree; wood|モク、ボク|き|木:き:tree;木曜日:もくようび:Thursday
+金|gold; money|キン、コン|かね|お金:おかね:money;金曜日:きんようび:Friday
+土|earth, soil|ド、ト|つち|土曜日:どようび:Saturday;土:つち:soil
+年|year|ネン|とし|今年:ことし:this year;毎年:まいとし:every year;来年:らいねん:next year
+時|time; hour|ジ|とき|時間:じかん:time; hours;一時:いちじ:one o'clock;何時:なんじ:what time
+分|minute; part; understand|ブン、フン、ブ|わ(かる)、わ(ける)|分かる:わかる:to understand;五分:ごふん:five minutes;半分:はんぶん:half
+半|half|ハン|なか(ば)|半分:はんぶん:half;三時半:さんじはん:half past three
+今|now|コン、キン|いま|今:いま:now;今日:きょう:today;今週:こんしゅう:this week
+週|week|シュウ||今週:こんしゅう:this week;毎週:まいしゅう:every week;来週:らいしゅう:next week
+毎|every|マイ||毎日:まいにち:every day;毎週:まいしゅう:every week;毎月:まいつき:every month
+人|person|ジン、ニン|ひと|人:ひと:person;日本人:にほんじん:Japanese person;三人:さんにん:three people
+男|man|ダン、ナン|おとこ|男:おとこ:man;男の子:おとこのこ:boy;男性:だんせい:male
+女|woman|ジョ、ニョ|おんな|女:おんな:woman;女の子:おんなのこ:girl;彼女:かのじょ:she; girlfriend
+子|child|シ、ス|こ|子供:こども:child;女の子:おんなのこ:girl;男の子:おとこのこ:boy
+父|father|フ|ちち|父:ちち:(my) father;お父さん:おとうさん:father
+母|mother|ボ|はは|母:はは:(my) mother;お母さん:おかあさん:mother
+友|friend|ユウ|とも|友達:ともだち:friend;友人:ゆうじん:friend
+私|I; private|シ|わたし|私:わたし:I, me;私立:しりつ:private (institution)
+名|name|メイ、ミョウ|な|名前:なまえ:name;有名:ゆうめい:famous
+先|previous; ahead|セン|さき|先生:せんせい:teacher;先週:せんしゅう:last week;先月:せんげつ:last month
+生|life; birth|セイ、ショウ|い(きる)、う(まれる)|学生:がくせい:student;先生:せんせい:teacher;生まれる:うまれる:to be born
+学|study, learning|ガク|まな(ぶ)|学生:がくせい:student;学校:がっこう:school;大学:だいがく:university
+校|school|コウ||学校:がっこう:school;高校:こうこう:high school
+語|language; word|ゴ|かた(る)|日本語:にほんご:Japanese language;英語:えいご:English;単語:たんご:word, vocabulary
+本|book; origin|ホン|もと|本:ほん:book;日本:にほん:Japan;本当:ほんとう:truth; really
+口|mouth|コウ、ク|くち|口:くち:mouth;入口:いりぐち:entrance;出口:でぐち:exit
+目|eye|モク|め|目:め:eye;一つ目:ひとつめ:the first one
+耳|ear|ジ|みみ|耳:みみ:ear
+手|hand|シュ|て|手:て:hand;手紙:てがみ:letter;上手:じょうず:skilled
+足|foot, leg; enough|ソク|あし、た(りる)|足:あし:foot, leg;足りる:たりる:to be enough
+山|mountain|サン|やま|山:やま:mountain;富士山:ふじさん:Mt. Fuji
+川|river|セン|かわ|川:かわ:river
+田|rice field|デン|た|田んぼ:たんぼ:rice paddy;山田:やまだ:Yamada (surname)
+天|heaven; sky|テン|あめ|天気:てんき:weather;天国:てんごく:heaven
+気|spirit; air; mood|キ、ケ||天気:てんき:weather;元気:げんき:healthy, energetic;電気:でんき:electricity; light
+雨|rain|ウ|あめ|雨:あめ:rain;大雨:おおあめ:heavy rain
+花|flower|カ|はな|花:はな:flower;花火:はなび:fireworks;花見:はなみ:cherry-blossom viewing
+上|up, above|ジョウ|うえ、あ(がる)、のぼ(る)|上:うえ:above, on top;上手:じょうず:skilled;上がる:あがる:to go up
+下|down, below|カ、ゲ|した、さ(がる)、くだ(さる)|下:した:below, under;地下鉄:ちかてつ:subway;下手:へた:unskilled
+中|middle, inside|チュウ|なか|中:なか:inside;中国:ちゅうごく:China;一日中:いちにちじゅう:all day long
+外|outside|ガイ、ゲ|そと、ほか|外:そと:outside;外国:がいこく:foreign country;外国人:がいこくじん:foreigner
+右|right|ウ、ユウ|みぎ|右:みぎ:right;右手:みぎて:right hand
+左|left|サ|ひだり|左:ひだり:left;左手:ひだりて:left hand
+前|before; front|ゼン|まえ|前:まえ:front; before;名前:なまえ:name;午前:ごぜん:a.m.
+後|after; behind|ゴ、コウ|あと、うし(ろ)、のち|後ろ:うしろ:behind;午後:ごご:p.m.;最後:さいご:last
+午|noon|ゴ||午前:ごぜん:a.m.;午後:ごご:p.m.
+東|east|トウ|ひがし|東:ひがし:east;東京:とうきょう:Tokyo
+西|west|セイ、サイ|にし|西:にし:west;関西:かんさい:Kansai region
+南|south|ナン|みなみ|南:みなみ:south;南口:みなみぐち:south exit
+北|north|ホク|きた|北:きた:north;北海道:ほっかいどう:Hokkaido
+大|big|ダイ、タイ|おお(きい)|大きい:おおきい:big;大学:だいがく:university;大丈夫:だいじょうぶ:all right
+小|small|ショウ|ちい(さい)、こ、お|小さい:ちいさい:small;小学校:しょうがっこう:elementary school
+高|tall; expensive|コウ|たか(い)|高い:たかい:tall; expensive;高校:こうこう:high school
+安|cheap; peaceful|アン|やす(い)|安い:やすい:cheap;安心:あんしん:relief, peace of mind
+長|long; leader|チョウ|なが(い)|長い:ながい:long;社長:しゃちょう:company president
+白|white|ハク|しろ、しろ(い)|白い:しろい:white;面白い:おもしろい:interesting
+新|new|シン|あたら(しい)|新しい:あたらしい:new;新聞:しんぶん:newspaper
+古|old|コ|ふる(い)|古い:ふるい:old (things);中古:ちゅうこ:secondhand
+多|many|タ|おお(い)|多い:おおい:many, numerous;多分:たぶん:probably
+少|few, a little|ショウ|すく(ない)、すこ(し)|少し:すこし:a little;少ない:すくない:few
+見|see|ケン|み(る)、み(せる)|見る:みる:to see;見せる:みせる:to show;花見:はなみ:cherry-blossom viewing
+聞|hear; ask|ブン、モン|き(く)|聞く:きく:to listen; to ask;新聞:しんぶん:newspaper
+食|eat; food|ショク|た(べる)|食べる:たべる:to eat;食べ物:たべもの:food;食堂:しょくどう:cafeteria
+飲|drink|イン|の(む)|飲む:のむ:to drink;飲み物:のみもの:drink, beverage
+行|go; conduct|コウ、ギョウ|い(く)、おこな(う)|行く:いく:to go;銀行:ぎんこう:bank;旅行:りょこう:trip
+来|come|ライ|く(る)|来る:くる:to come;来週:らいしゅう:next week;来年:らいねん:next year
+書|write|ショ|か(く)|書く:かく:to write;辞書:じしょ:dictionary;図書館:としょかん:library
+読|read|ドク|よ(む)|読む:よむ:to read;読書:どくしょ:reading (books)
+話|talk; story|ワ|はな(す)、はなし|話す:はなす:to speak;電話:でんわ:telephone;話:はなし:story, talk
+言|say; word|ゲン、ゴン|い(う)、こと|言う:いう:to say;言葉:ことば:word; language
+休|rest|キュウ|やす(む)|休む:やすむ:to rest; to be absent;休み:やすみ:holiday, break
+買|buy|バイ|か(う)|買う:かう:to buy;買い物:かいもの:shopping
+出|exit; go out|シュツ|で(る)、だ(す)|出る:でる:to leave, go out;出口:でぐち:exit;出す:だす:to take out
+入|enter|ニュウ|はい(る)、い(れる)|入る:はいる:to enter;入口:いりぐち:entrance;入れる:いれる:to put in
+立|stand|リツ|た(つ)|立つ:たつ:to stand;私立:しりつ:private (institution)
+会|meet; association|カイ|あ(う)|会う:あう:to meet;会社:かいしゃ:company;会話:かいわ:conversation
+社|company; shrine|シャ|やしろ|会社:かいしゃ:company;神社:じんじゃ:shrine;社長:しゃちょう:company president
+車|car, vehicle|シャ|くるま|車:くるま:car;電車:でんしゃ:train;自転車:じてんしゃ:bicycle
+電|electricity|デン||電車:でんしゃ:train;電話:でんわ:telephone;電気:でんき:electricity; light
+道|road, way|ドウ|みち|道:みち:road, way;北海道:ほっかいどう:Hokkaido;柔道:じゅうどう:judo
+店|shop|テン|みせ|店:みせ:shop;喫茶店:きっさてん:café;書店:しょてん:bookstore
+駅|station|エキ||駅:えき:station;駅前:えきまえ:in front of the station
+国|country|コク|くに|国:くに:country;外国:がいこく:foreign country;中国:ちゅうごく:China
+何|what|カ|なに、なん|何:なに:what;何人:なんにん:how many people;何時:なんじ:what time
+`;
+
+const KANJI = [], KMAP = {}, WORDS = [], WMAP = {};
+KANJI_RAW.trim().split("\n").forEach((line, i) => {
+  const [k, meaning, on, kun, ex] = line.split("|");
+  const examples = (ex || "").split(/;(?! )/).filter(Boolean).map(s => {
+    const [w, r, m] = s.split(":"); return { w, r, m };
+  });
+  const item = { k, meaning, on, kun, examples, idx: i };
+  KANJI.push(item); KMAP[k] = item;
+});
+// Example separator is ";" not followed by a space ("; " separates senses inside a meaning).
+// Words: deduplicated across kanji. A word unlocks once every kanji in it that
+// this app teaches has been introduced (seen at least once).
+KANJI.forEach(kj => kj.examples.forEach(e => {
+  if (WMAP[e.w]) return;
+  const ks = [...e.w].filter(c => KMAP[c]);
+  if (!ks.length) return;
+  const order = Math.max(...ks.map(c => KMAP[c].idx));
+  const word = { w: e.w, r: e.r, m: e.m, ks, order, n: WORDS.length };
+  WORDS.push(word); WMAP[e.w] = word;
+}));
+WORDS.sort((a, b) => a.order - b.order || a.n - b.n);
+
+const DECKS = [
+  { id: "kanji", name: "Kanji", desc: "See the kanji, recall meaning and readings", def: 10 },
+  { id: "words", name: "Words", desc: "Vocabulary that unlocks as you learn its kanji", def: 15 },
+  { id: "recall", name: "Kanji recall", desc: "See the meaning, picture or write the kanji. Unlocks once a kanji is past its first few days", def: 5 },
+];
+const cardId = (deck, key) => deck[0] + ":" + key; // k:日, w:毎日, r:日
+
+/* ============================== STATE ============================== */
+const LS_KEY = "kanji-srs-v1";
+function freshState() {
+  return { v: 1, updatedAt: 0, cards: {}, daily: { day: -1, newDone: {}, reviews: 0 }, history: {},
+    settings: { newPerDay: Object.fromEntries(DECKS.map(d => [d.id, d.def])), autoSpeak: false, typeMode: true, backupEveryDays: 3 } };
+}
+function normalize(s) {
+  const f = freshState();
+  if (!s || typeof s !== "object") return f;
+  return { ...f, ...s, cards: s.cards || {}, daily: { ...f.daily, ...(s.daily || {}) }, history: s.history || {},
+    settings: { ...f.settings, ...(s.settings || {}), newPerDay: { ...f.settings.newPerDay, ...((s.settings || {}).newPerDay || {}) } } };
+}
+let state = freshState();
+function readLocalStorageState() { try { const raw = localStorage.getItem(LS_KEY); return raw ? normalize(JSON.parse(raw)) : null; } catch (e) { return null; } }
+
+/* ============================== SCHEDULER (Anki-style SM-2) ============================== */
+const MIN = 60e3, DAY = 864e5, ROLLOVER_H = 4;
+const LEARN_STEPS = [1, 10], RELEARN_STEPS = [10], GRAD_IVL = 1, EASY_IVL = 4;
+const START_EASE = 2.5, MIN_EASE = 1.3, HARD_MULT = 1.2, EASY_BONUS = 1.3, MAX_IVL = 36500;
+
+function dayNum(t) { const off = new Date(t).getTimezoneOffset() * MIN; return Math.floor((t - off - ROLLOVER_H * 3600e3) / DAY); }
+function today() { return dayNum(Date.now()); }
+function dueAtDay(day) { // a timestamp that falls on `day` (local, after rollover)
+  const now = Date.now(); return now + (day - dayNum(now)) * DAY;
+}
+function getCard(id) { return state.cards[id] || { t: "new", s: 0, due: 0, ivl: 0, e: START_EASE, r: 0, l: 0 }; }
+function fuzz(ivl) { if (ivl < 3) return ivl; const f = Math.max(1, Math.round(ivl * 0.05)); return ivl + Math.floor(Math.random() * (2 * f + 1)) - f; }
+
+// grade: 1 again, 2 hard, 3 good, 4 easy. Returns a new card state. `preview` skips fuzz.
+function schedule(c, grade, now, preview) {
+  c = { ...c }; const td = dayNum(now);
+  const graduate = ivl => { ivl = Math.min(MAX_IVL, preview ? ivl : fuzz(ivl)); c.t = "review"; c.s = 0; c.ivl = ivl; c.due = dueAtDay(td + ivl); };
+  if (c.t === "new" || c.t === "learn") {
+    const st = LEARN_STEPS; const s = c.t === "new" ? 0 : c.s;
+    if (grade === 1) { c.t = "learn"; c.s = 0; c.due = now + st[0] * MIN; }
+    else if (grade === 2) { c.t = "learn"; c.s = s; const d = (s === 0 && st.length > 1) ? (st[0] + st[1]) / 2 : st[s] * 1.5; c.due = now + d * MIN; }
+    else if (grade === 3) { if (s + 1 >= st.length) graduate(GRAD_IVL); else { c.t = "learn"; c.s = s + 1; c.due = now + st[s + 1] * MIN; } }
+    else graduate(EASY_IVL);
+  } else if (c.t === "relearn") {
+    const st = RELEARN_STEPS;
+    if (grade === 1) { c.s = 0; c.due = now + st[0] * MIN; }
+    else if (grade === 2) { c.due = now + st[c.s] * 1.5 * MIN; }
+    else if (grade === 3) { if (c.s + 1 >= st.length) graduate(Math.max(1, c.ivl)); else { c.s++; c.due = now + st[c.s] * MIN; } }
+    else graduate(Math.max(1, c.ivl) + 1);
+  } else { // review
+    const late = Math.max(0, td - dayNum(c.due));
+    const ivl = c.ivl || 1;
+    const hard = Math.max(ivl + 1, Math.round(ivl * HARD_MULT));
+    const good = Math.max(hard + 1, Math.round((ivl + late / 2) * c.e));
+    const easy = Math.max(good + 1, Math.round((ivl + late) * c.e * EASY_BONUS));
+    if (grade === 1) { c.l = (c.l || 0) + 1; c.e = Math.max(MIN_EASE, c.e - 0.2); c.ivl = 1; c.t = "relearn"; c.s = 0; c.due = now + RELEARN_STEPS[0] * MIN; }
+    else if (grade === 2) { c.e = Math.max(MIN_EASE, c.e - 0.15); graduate(hard); }
+    else if (grade === 3) { graduate(good); }
+    else { c.e = c.e + 0.15; graduate(easy); }
+  }
+  c.r = (c.r || 0) + 1; c.last = now;
+  return c;
+}
+function fmtIvl(ms) {
+  const m = ms / MIN;
+  if (m < 60) return Math.max(1, Math.round(m)) + "m";
+  if (m < 1440) return Math.round(m / 60) + "h";
+  const d = Math.round(m / 1440);
+  if (d < 30) return d + "d";
+  if (d < 365) return (d / 30).toFixed(1).replace(".0", "") + "mo";
+  return (d / 365).toFixed(1).replace(".0", "") + "y";
+}
+function previewLabel(c, grade) {
+  const now = Date.now(); const n = schedule(c, grade, now, true);
+  return n.t === "review" ? fmtIvl(n.ivl * DAY) : fmtIvl(n.due - now);
+}
+
+/* ============================== QUEUES ============================== */
+function rollDay() {
+  const td = today();
+  if (state.daily.day !== td) state.daily = { day: td, newDone: {}, reviews: 0 };
+}
+function introduced(k) { return getCard(cardId("kanji", k)).t !== "new"; }
+function deckCards(deck) { // ordered list of {id, key} available (unlocked) in this deck
+  if (deck === "kanji") return KANJI.map(k => ({ id: cardId("kanji", k.k), key: k.k }));
+  if (deck === "words") return WORDS.filter(w => w.ks.every(introduced)).map(w => ({ id: cardId("words", w.w), key: w.w }));
+  if (deck === "recall") return KANJI.filter(k => { const c = getCard(cardId("kanji", k.k)); return (c.t === "review" && c.ivl >= 3) || c.t === "relearn"; })
+    .map(k => ({ id: cardId("recall", k.k), key: k.k }));
+  return [];
+}
+function lockedWords() { return WORDS.length - deckCards("words").length; }
+function deckCounts(deck) {
+  rollDay(); const now = Date.now(), td = today();
+  let nw = 0, lr = 0, due = 0;
+  const left = Math.max(0, (state.settings.newPerDay[deck] ?? 0) - (state.daily.newDone[deck] || 0));
+  for (const { id } of deckCards(deck)) {
+    const c = getCard(id);
+    if (c.t === "new") nw++;
+    else if (c.t === "learn" || c.t === "relearn") { if (c.due <= now + 20 * MIN) lr++; }
+    else if (dayNum(c.due) <= td) due++;
+  }
+  return { nw: Math.min(nw, left), lr, due };
+}
+let lastShown = null;
+function pickNext(decks) {
+  rollDay(); const now = Date.now(), td = today();
+  const learn = [], rev = [], news = [], ahead = []; let nextLearn = Infinity;
+  for (const deck of decks) {
+    let left = Math.max(0, (state.settings.newPerDay[deck] ?? 0) - (state.daily.newDone[deck] || 0));
+    for (const it of deckCards(deck)) {
+      const c = getCard(it.id); const item = { ...it, deck, c };
+      if (c.t === "new") { if (left > 0) { news.push(item); left--; } }
+      else if (c.t === "learn" || c.t === "relearn") {
+        if (c.due <= now) learn.push(item); else if (c.due <= now + 20 * MIN) ahead.push(item); else nextLearn = Math.min(nextLearn, c.due);
+        nextLearn = Math.min(nextLearn, c.due);
+      } else if (dayNum(c.due) <= td) rev.push(item);
+    }
+  }
+  const avoid = arr => arr.length > 1 && arr[0].id === lastShown ? arr[1] : arr[0];
+  learn.sort((a, b) => a.c.due - b.c.due);
+  if (learn.length && !(learn.length === 1 && learn[0].id === lastShown && (rev.length || news.length))) return avoid(learn);
+  rev.sort((a, b) => a.c.due - b.c.due);
+  // Interleave new cards: kanji first, so their words unlock right after.
+  news.sort((a, b) => DECKS.findIndex(d => d.id === a.deck) - DECKS.findIndex(d => d.id === b.deck));
+  if (rev.length && news.length) return Math.random() < rev.length / (rev.length + news.length) ? avoid(rev) : avoid(news);
+  if (rev.length) return avoid(rev);
+  if (news.length) return avoid(news);
+  if (learn.length) return learn[0];
+  ahead.sort((a, b) => a.c.due - b.c.due);
+  if (ahead.length) return avoid(ahead);
+  return { none: true, nextLearn };
+}
+
+/* ============================== PERSISTENCE (SQLite in the browser's private file system) ============================== */
+// The database runs in db-worker.js. The in-memory `state` object is the working copy;
+// every change is written through to SQLite right away. If SQLite can't start (very old
+// browser, or the app is already open in another tab), it falls back to localStorage.
+const syncEl = document.getElementById("sync");
+const DECK_BY_LETTER = Object.fromEntries(DECKS.map(d => [d.id[0], d.id]));
+function splitId(id) { const [l, ...rest] = id.split(":"); return { deck: DECK_BY_LETTER[l], item: rest.join(":") }; }
+function cardToRow(id, c) {
+  const { deck, item } = splitId(id);
+  return { card_id: id, deck, item, state: c.t, step: c.s || 0, due_ms: c.due || null, interval_days: c.ivl || 0,
+    ease: c.e ?? START_EASE, reps: c.r || 0, lapses: c.l || 0, last_review_ms: c.last || null };
+}
+function rowToCard(r) {
+  const c = { t: r.state, s: r.step, due: r.due_ms ?? 0, ivl: r.interval_days, e: r.ease, r: r.reps, l: r.lapses };
+  if (r.last_review_ms) c.last = r.last_review_ms;
+  return c;
+}
+const dayDate = d => new Date(d * DAY).toISOString().slice(0, 10); // local calendar date of study day d
+function dailyRow(d = state.daily) {
+  return { study_day: d.day, date: dayDate(d.day), reviews: d.reviews || 0,
+    new_kanji: d.newDone.kanji || 0, new_words: d.newDone.words || 0, new_recall: d.newDone.recall || 0 };
+}
+function stateToRows(st) {
+  const days = new Map(Object.entries(st.history || {}).map(([d, n]) => [+d, { study_day: +d, date: dayDate(+d), reviews: n, new_kanji: 0, new_words: 0, new_recall: 0 }]));
+  if (st.daily && st.daily.day >= 0) days.set(st.daily.day, dailyRow(st.daily));
+  return { cards: Object.entries(st.cards).map(([id, c]) => cardToRow(id, c)), daily: [...days.values()] };
+}
+function applyRows(data) {
+  const st = normalize({ settings: data.settings });
+  for (const r of data.cards) st.cards[r.card_id] = rowToCard(r);
+  for (const r of data.daily) if (r.reviews) st.history[r.study_day] = r.reviews;
+  const t = data.daily.find(r => r.study_day === today());
+  if (t) st.daily = { day: t.study_day, reviews: t.reviews, newDone: { kanji: t.new_kanji, words: t.new_words, recall: t.new_recall } };
+  state = st;
+  if (data.reviewCount != null) reviewCount = data.reviewCount;
+}
+
+const dbc = (() => {
+  let w = null, seq = 0; const pending = new Map();
+  function fail(err) { for (const p of pending.values()) p.rej(err); pending.clear(); }
+  return {
+    start() {
+      w = new Worker("db-worker.js", { type: "module" });
+      w.onmessage = e => { const p = pending.get(e.data.id); if (!p) return; pending.delete(e.data.id); e.data.ok ? p.res(e.data.result) : p.rej(new Error(e.data.error)); };
+      w.onerror = e => { e.preventDefault(); fail(new Error(e.message || "The database worker failed to load")); };
+    },
+    call(op, args, transfer) {
+      return new Promise((res, rej) => { const id = ++seq; pending.set(id, { res, rej }); w.postMessage({ id, op, args }, transfer || []); });
+    },
+  };
+})();
+const withTimeout = (p, ms, msg) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(msg)), ms))]);
+
+let dbReady = false, dbError = "", sqliteVersion = "", reviewCount = 0, migratedNote = "";
+let lastBackupMs = 0, lastBackupHow = "", persisted = null, changeSeq = 0;
+function persistLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
+function savedLabel() { return dbReady ? "Saved on this device" : "Saved in browser storage"; }
+function track(p) {
+  changeSeq++; scheduleAutoBackup();
+  if (!p) { persistLocal(); return; }
+  syncEl.textContent = "Saving…";
+  p.then(() => { syncEl.textContent = savedLabel(); })
+   .catch(e => { syncEl.textContent = "Couldn't save!"; console.error(e); persistLocal(); });
+}
+const store = {
+  review(x) { reviewCount++; track(dbReady && dbc.call("review", x)); },
+  undoReview(x) { reviewCount = Math.max(0, reviewCount - 1); track(dbReady && dbc.call("undoReview", x)); },
+  settings() { track(dbReady && dbc.call("settings", state.settings)); },
+  replaceState(clearReviews) {
+    if (clearReviews) reviewCount = 0;
+    track(dbReady && dbc.call("replaceState", { ...stateToRows(state), settings: state.settings, clearReviews }));
+  },
+};
+
+async function boot() {
+  main.innerHTML = `<p class="hint">Opening your database…</p>`;
+  try {
+    if (!("storage" in navigator) || !navigator.storage.getDirectory) throw new Error("This browser has no private file system (OPFS). iOS 16.4+ or a recent Chrome/Firefox is needed.");
+    // Only one tab/window may own the database. Hold a Web Lock for the page's lifetime;
+    // a second tab waits here until the first one closes.
+    if (navigator.locks) {
+      const waitMsg = setTimeout(() => { main.innerHTML = `<div class="panel banner"><div class="t">Kanji SRS is open in another tab or window. Close it and this one will continue.</div></div>`; }, 1500);
+      await new Promise(got => navigator.locks.request("kanji-srs-db", () => { got(); return new Promise(() => {}); }));
+      clearTimeout(waitMsg); main.innerHTML = `<p class="hint">Opening your database…</p>`;
+    }
+    dbc.start();
+    const info = await withTimeout(dbc.call("init"), 30000, "The database took too long to open. Is the app open in another tab or window?");
+    sqliteVersion = info.sqliteVersion;
+    const empty = !info.cards.length && !info.daily.length;
+    const old = !info.meta.migrated_from && empty ? readLocalStorageState() : null;
+    if (old && Object.keys(old.cards).length) {
+      state = old;
+      await dbc.call("replaceState", { ...stateToRows(old), settings: old.settings, clearReviews: false });
+      migratedNote = `Moved ${Object.keys(old.cards).length} cards from the old browser storage into SQLite.`;
+    } else applyRows(info);
+    if (!info.meta.migrated_from) await dbc.call("meta", { key: "migrated_from", value: old ? "localStorage" : "none" });
+    lastBackupMs = +info.meta.last_backup_ms || 0; lastBackupHow = info.meta.last_backup_method || "";
+    dbReady = true; syncEl.textContent = savedLabel();
+  } catch (e) {
+    dbReady = false;
+    dbError = String(e && e.message || e);
+    if (/lock|access handle|NoModificationAllowed|InvalidState/i.test(dbError)) dbError = "The database is locked, probably because the app is open in another tab or window. Close the others and reload. " + dbError;
+    state = readLocalStorageState() || freshState();
+    syncEl.textContent = "Database unavailable";
+    console.error(e);
+  }
+  if (navigator.storage && navigator.storage.persist) {
+    try { persisted = (await navigator.storage.persisted()) || (await navigator.storage.persist()); } catch (e) {}
+  }
+  await loadBackupHandle();
+  render();
+  if (dbReady) prepareExport();
+}
+
+/* ------------------------------ backups ------------------------------ */
+// Browsers can't silently write a file on iOS, so backups work in three layers:
+//  1. Daily snapshots inside the app's own storage (automatic; protects against mistakes, not device loss).
+//  2. A reminder banner every N days with a one-tap "Back up now" (share sheet → Save to Files / iCloud Drive on iPhone).
+//  3. On Chrome/Edge desktop, a chosen backup file that is overwritten automatically after you study.
+let exportCache = null, exportCacheSeq = -1, exportPromise = null;
+function prepareExport() {
+  if (!dbReady) return Promise.resolve(null);
+  if (exportCache && exportCacheSeq === changeSeq) return Promise.resolve(exportCache);
+  const seqAtStart = changeSeq;
+  exportPromise = dbc.call("exportDb").then(bytes => { exportCache = bytes; exportCacheSeq = seqAtStart; return bytes; });
+  return exportPromise;
+}
+const backupName = () => `kanji-srs-${new Date().toLocaleDateString("sv-SE")}.sqlite3`;
+async function markBackedUp(how) {
+  lastBackupMs = Date.now(); lastBackupHow = how;
+  await dbc.call("meta", { key: "last_backup_ms", value: lastBackupMs });
+  await dbc.call("meta", { key: "last_backup_method", value: how });
+}
+
+// Minimal IndexedDB key/value store, only used to remember the desktop backup file handle.
+const kv = {
+  open() { return new Promise((res, rej) => { const r = indexedDB.open("kanji-srs-kv", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async get(k) { const db = await this.open(); return new Promise(res => { const r = db.transaction("kv").objectStore("kv").get(k); r.onsuccess = () => res(r.result); r.onerror = () => res(undefined); }); },
+  async set(k, v) { const db = await this.open(); return new Promise(res => { const t = db.transaction("kv", "readwrite"); v === undefined ? t.objectStore("kv").delete(k) : t.objectStore("kv").put(v, k); t.oncomplete = () => res(); t.onerror = () => res(); }); },
+};
+const canAutoFile = () => "showSaveFilePicker" in window;
+let fileHandle = null, filePerm = "none";
+async function loadBackupHandle() {
+  if (!canAutoFile()) return;
+  try { fileHandle = (await kv.get("backupHandle")) || null; filePerm = fileHandle ? await fileHandle.queryPermission({ mode: "readwrite" }) : "none"; } catch (e) { fileHandle = null; }
+}
+async function writeHandle(bytes) { const w = await fileHandle.createWritable(); await w.write(bytes); await w.close(); }
+let autoTimer = null, autoSeq = -1;
+function scheduleAutoBackup() { if (fileHandle) { clearTimeout(autoTimer); autoTimer = setTimeout(autoBackup, 20000); } }
+async function autoBackup() {
+  if (!dbReady || !fileHandle || autoSeq === changeSeq) return;
+  try {
+    filePerm = await fileHandle.queryPermission({ mode: "readwrite" });
+    if (filePerm !== "granted") return;
+    const seq = changeSeq; await writeHandle(await prepareExport()); autoSeq = seq; await markBackedUp("auto-file");
+  } catch (e) { console.warn("auto backup failed", e); }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") autoBackup(); else if (dbReady) prepareExport(); });
+
+// Called from a tap. Uses a pre-built export so iOS still treats the share as user-initiated.
+async function backupNow() {
+  if (!dbReady) return "No database to back up.";
+  if (fileHandle) {
+    try {
+      filePerm = await fileHandle.requestPermission({ mode: "readwrite" });
+      if (filePerm === "granted") { await writeHandle(await prepareExport()); autoSeq = changeSeq; await markBackedUp("auto-file"); return `Saved to ${fileHandle.name}.`; }
+    } catch (e) { console.warn(e); }
+  }
+  const fresh = exportCache && exportCacheSeq === changeSeq;
+  const bytes = fresh ? exportCache : await prepareExport();
+  const file = new File([bytes], backupName(), { type: "application/x-sqlite3" });
+  const mobile = matchMedia("(pointer: coarse)").matches;
+  if (mobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: file.name }); await markBackedUp("share"); return "Backup shared. On iPhone pick “Save to Files” and choose iCloud Drive."; }
+    catch (e) {
+      if (e.name === "AbortError") return "Backup cancelled.";
+      if (e.name === "NotAllowedError") return "The backup is ready now. Tap the button once more.";
+    }
+  }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  await markBackedUp("download");
+  return `Downloaded ${file.name}.`;
+}
+async function chooseBackupFile() {
+  try {
+    fileHandle = await window.showSaveFilePicker({ suggestedName: "kanji-srs-backup.sqlite3",
+      types: [{ description: "SQLite database", accept: { "application/x-sqlite3": [".sqlite3", ".db"] } }] });
+    await kv.set("backupHandle", fileHandle); filePerm = "granted";
+    await writeHandle(await prepareExport()); autoSeq = changeSeq; await markBackedUp("auto-file");
+    return `Backing up automatically to ${fileHandle.name}.`;
+  } catch (e) { return e.name === "AbortError" ? "" : "Couldn't use that file: " + e.message; }
+}
+async function stopBackupFile() { fileHandle = null; filePerm = "none"; await kv.set("backupHandle", undefined); }
+
+const backupEvery = () => state.settings.backupEveryDays ?? 3;
+function backupDue() {
+  const n = backupEvery();
+  if (!dbReady || n <= 0 || !Object.keys(state.cards).length || sessionStorage.getItem("backup-snooze")) return false;
+  if (fileHandle && filePerm === "granted") return false; // handled silently
+  return Date.now() - lastBackupMs >= n * DAY;
+}
+function agoText(ms) {
+  if (!ms) return "never";
+  const d = Math.floor((Date.now() - ms) / DAY);
+  return d <= 0 ? "today" : d === 1 ? "yesterday" : `${d} days ago`;
+}
+function backupBannerHtml() {
+  if (dbError) return `<div class="panel banner"><div class="t">⚠️ ${esc(dbError)}<br><span class="hint">Your progress is going to browser storage for now.</span></div></div>`;
+  if (fileHandle && filePerm !== "granted" && backupEvery() > 0 && Object.keys(state.cards).length)
+    return `<div class="panel banner"><div class="t">Automatic backups to <b>${esc(fileHandle.name)}</b> are paused until you allow it again.</div><button class="btn primary" id="bk-now">Allow</button></div>`;
+  if (!backupDue()) return migratedNote ? `<div class="panel banner"><div class="t">${esc(migratedNote)}</div></div>` : "";
+  return `<div class="panel banner"><div class="t">💾 Last backup: <b>${agoText(lastBackupMs)}</b>. Save a copy of your database off this device.<div class="msg" id="bk-msg"></div></div>
+    <button class="btn primary" id="bk-now">Back up now</button><button class="btn" id="bk-later">Later</button></div>`;
+}
+function wireBackupBanner() {
+  const now = document.getElementById("bk-now"), later = document.getElementById("bk-later");
+  if (now) now.onclick = async () => {
+    now.disabled = true; const msg = await backupNow(); now.disabled = false;
+    const el = document.getElementById("bk-msg"); if (el) el.textContent = msg;
+    if (!backupDue()) setTimeout(() => { if (view === "home") renderHome(); }, 2500);
+  };
+  if (later) later.onclick = () => { sessionStorage.setItem("backup-snooze", "1"); renderHome(); };
+}
+
+function renderBackupPanel(el) {
+  const fmtDay = id => /^\d+$/.test(id) ? dayDate(+id) : id.startsWith("pre-import-") ? "before import " + new Date(+id.slice(11)).toLocaleString() : id;
+  el.innerHTML = `
+    <p class="hint">${dbReady
+      ? `Your progress lives in a SQLite database (SQLite ${esc(sqliteVersion)}) inside this app's private storage on this device. ${reviewCount} reviews logged.
+         Storage is ${persisted ? "<b>persistent</b> (the browser promised not to clear it)" : "<b>not marked persistent</b>, so the browser may clear it under storage pressure or after long disuse"}.`
+      : `⚠️ ${esc(dbError || "Database not available.")}`}</p>
+    <p class="hint">Last backup: <b>${agoText(lastBackupMs)}</b>${lastBackupHow ? ` (${lastBackupHow === "auto-file" ? "automatic file" : lastBackupHow})` : ""}.</p>
+    <div class="row"><label for="bk-every">Remind me to back up<br><span class="hint">A banner on the home screen with a one-tap backup. On iPhone, choose “Save to Files” → iCloud Drive.</span></label>
+      <select id="bk-every">${[[0, "Never"], [1, "Every day"], [3, "Every 3 days"], [7, "Every week"]].map(([v, t]) => `<option value="${v}" ${backupEvery() === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>
+    <div class="btnrow"><button class="btn primary" id="bk-now2" ${dbReady ? "" : "disabled"}>Back up now (.sqlite3)</button>
+      <button class="btn" id="bk-restore">Restore from a file…</button><input type="file" id="bk-file" hidden></div>
+    ${canAutoFile() && dbReady ? `<div class="row"><label>Automatic backup file<br><span class="hint">${fileHandle
+      ? `Overwriting <b>${esc(fileHandle.name)}</b> about 20 seconds after you study${filePerm === "granted" ? "" : " (paused until you allow it again)"}.`
+      : "Chrome and Edge on a computer can keep one backup file up to date without asking each time. Put it in a synced folder (iCloud Drive, Dropbox, OneDrive) for an off-device copy."}</span></label>
+      ${fileHandle ? `<button class="btn" id="bk-stop">Stop</button>` : `<button class="btn" id="bk-pick">Choose file…</button>`}</div>` : ""}
+    <div class="msg" id="bk-msg2"></div>
+    <h2>Snapshots on this device</h2>
+    <p class="hint">A copy is kept automatically for each of the last 7 study days, so you can roll back a mistake. They live in the same storage as the app, so they are not a substitute for backups.</p>
+    <div class="snaps" id="bk-snaps"><span class="hint">${dbReady ? "Loading…" : "Not available."}</span></div>
+    <h2>Bring over progress from the old web version</h2>
+    <p class="hint">In the old Kanji SRS page, open Settings and press “Copy progress”, then paste it here.</p>
+    <textarea id="io" placeholder="Paste a progress backup (JSON) here"></textarea>
+    <button class="btn" id="imp">Load pasted progress</button>
+    <div class="msg" id="iomsg"></div>`;
+  const msg = document.getElementById("bk-msg2"), say = t => { msg.textContent = t; };
+  document.getElementById("bk-every").onchange = e => { state.settings.backupEveryDays = +e.target.value; store.settings(); };
+  document.getElementById("bk-now2").onclick = async e => { e.target.disabled = true; say(await backupNow()); e.target.disabled = false; };
+  const fileIn = document.getElementById("bk-file");
+  document.getElementById("bk-restore").onclick = () => fileIn.click();
+  fileIn.onchange = async () => {
+    const f = fileIn.files[0]; fileIn.value = ""; if (!f) return;
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    try {
+      if (bytes[0] === 0x7b) { // "{" → JSON progress from the old version
+        const s = JSON.parse(new TextDecoder().decode(bytes)); if (!s || !s.cards) throw new Error("That JSON isn't a progress backup.");
+        state = normalize(s); store.replaceState(false);
+      } else {
+        if (!dbReady) throw new Error("The database isn't available, so a .sqlite3 file can't be restored.");
+        applyRows(await dbc.call("importDb", { bytes }, [bytes.buffer]));
+        changeSeq++; persistLocal();
+      }
+      say(`Restored from ${f.name}.`); setTimeout(() => go("home"), 1200);
+    } catch (e) { say(String(e.message || e)); }
+  };
+  const pick = document.getElementById("bk-pick"), stop = document.getElementById("bk-stop");
+  if (pick) pick.onclick = async () => { say(await chooseBackupFile()); renderBackupPanel(el); };
+  if (stop) stop.onclick = async () => { await stopBackupFile(); renderBackupPanel(el); };
+  document.getElementById("imp").onclick = () => {
+    const out = document.getElementById("iomsg");
+    try { const s = JSON.parse(document.getElementById("io").value); if (!s || !s.cards) throw 0; state = normalize(s); store.replaceState(false); out.textContent = `Progress loaded (${Object.keys(state.cards).length} cards).`; }
+    catch (e) { out.textContent = "That doesn't look like a progress backup."; }
+  };
+  if (dbReady) dbc.call("listSnapshots").then(list => {
+    const box = document.getElementById("bk-snaps"); if (!box) return;
+    if (!list.length) { box.innerHTML = `<span class="hint">None yet. One is taken at your first review each day.</span>`; return; }
+    box.innerHTML = list.slice().reverse().map(id => `<div class="snap"><span>${esc(fmtDay(id))}</span><button class="btn" data-snap="${esc(id)}">Restore</button></div>`).join("");
+    box.querySelectorAll("[data-snap]").forEach(b => {
+      let armed = false;
+      b.onclick = async () => {
+        if (!armed) { armed = true; b.textContent = "Tap again to replace current progress"; return; }
+        try { applyRows(await dbc.call("restoreSnapshot", { id: b.dataset.snap })); changeSeq++; say("Snapshot restored."); setTimeout(() => go("home"), 1000); }
+        catch (e) { say("Couldn't restore: " + e.message); }
+      };
+    });
+  });
+}
+
+/* ============================== SPEECH ============================== */
+function speak(text) {
+  try {
+    if (!("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text); u.lang = "ja-JP"; u.rate = 0.9;
+    const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.startsWith("ja")); if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+/* ============================== VIEWS ============================== */
+const main = document.getElementById("main");
+let view = "home", session = null;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => go(b.dataset.view));
+function go(v) {
+  view = v; session = v === "study" ? session : null;
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.view === v || (v === "study" && b.dataset.view === "home")));
+  render();
+}
+function render() { ({ home: renderHome, study: renderStudy, browse: renderBrowse, settings: renderSettings })[view](); }
+
+function streak() {
+  let s = 0, d = today(); if (!state.history[d]) d--;
+  while (state.history[d]) { s++; d--; }
+  return s;
+}
+function renderHome() {
+  rollDay();
+  const learnedK = KANJI.filter(k => introduced(k.k)).length;
+  const matureK = KANJI.filter(k => { const c = getCard(cardId("kanji", k.k)); return c.t === "review" && c.ivl >= 21; }).length;
+  const totals = { nw: 0, lr: 0, due: 0 };
+  const rows = DECKS.map(d => {
+    const c = deckCounts(d.id); totals.nw += c.nw; totals.lr += c.lr; totals.due += c.due;
+    const extra = d.id === "words" && lockedWords() ? ` · ${lockedWords()} still locked` : "";
+    return `<div class="panel deck">
+      <div><div class="name">${d.name}</div><div class="desc">${d.desc}${extra}</div></div>
+      <div class="counts"><span class="c-new" title="New">${c.nw}</span><span class="c-learn" title="Learning">${c.lr}</span><span class="c-due" title="Due">${c.due}</span></div>
+      <button class="btn" data-deck="${d.id}" ${c.nw + c.lr + c.due ? "" : "disabled"}>Study</button>
+    </div>`;
+  }).join("");
+  const any = totals.nw + totals.lr + totals.due;
+  main.innerHTML = `${backupBannerHtml()}
+    <div class="stats">
+      <div class="stat"><b>${state.daily.reviews}</b><small>Reviews today</small></div>
+      <div class="stat"><b>${streak()}</b><small>Day streak</small></div>
+      <div class="stat"><b>${learnedK}<span class="hint">/${KANJI.length}</span></b><small>Kanji introduced</small></div>
+      <div class="stat"><b>${matureK}</b><small>Kanji mature (21d+)</small></div>
+    </div>
+    <button class="btn primary big" id="studyAll" ${any ? "" : "disabled"}>${any ? `Study all · <span>${totals.nw} new, ${totals.lr} learning, ${totals.due} due</span>` : "All done for today 🎉"}</button>
+    <div class="decks">${rows}</div>
+    <p class="hint" style="margin-top:16px">Counts are <span class="c-new">new</span> · <span class="c-learn">learning</span> · <span class="c-due">due</span>. Type your answer and press <b>Enter</b>; romaji turns into kana for readings. After checking, <b>Enter</b> accepts the grade, <b>1–4</b> picks another, <b>Z</b> undoes, <b>S</b> speaks.</p>`;
+  document.getElementById("studyAll").onclick = () => startSession(DECKS.map(d => d.id));
+  wireBackupBanner();
+  main.querySelectorAll("[data-deck]").forEach(b => b.onclick = () => startSession([b.dataset.deck]));
+}
+
+/* ============================== TYPED ANSWERS ============================== */
+// Romaji → hiragana, so readings can be typed on any keyboard (a Japanese IME works too).
+const ROMA = (() => {
+  const t = { a: "あ", i: "い", u: "う", e: "え", o: "お", "-": "ー" };
+  const rows = { k: "かきくけこ", s: "さしすせそ", t: "たちつてと", n: "なにぬねの", h: "はひふへほ", m: "まみむめも",
+    r: "らりるれろ", g: "がぎぐげご", z: "ざじずぜぞ", d: "だぢづでど", b: "ばびぶべぼ", p: "ぱぴぷぺぽ" };
+  for (const [c, ks] of Object.entries(rows)) [..."aiueo"].forEach((v, j) => t[c + v] = ks[j]);
+  Object.assign(t, { ya: "や", yu: "ゆ", yo: "よ", ye: "いぇ", wa: "わ", wo: "を", wi: "うぃ", we: "うぇ",
+    shi: "し", chi: "ち", tsu: "つ", fu: "ふ", ji: "じ", si: "し", ti: "ち", tu: "つ", hu: "ふ", zi: "じ", di: "ぢ", du: "づ",
+    sha: "しゃ", shu: "しゅ", sho: "しょ", she: "しぇ", cha: "ちゃ", chu: "ちゅ", cho: "ちょ", che: "ちぇ",
+    ja: "じゃ", ju: "じゅ", jo: "じょ", je: "じぇ", fa: "ふぁ", fi: "ふぃ", fe: "ふぇ", fo: "ふぉ", vu: "ゔ",
+    xa: "ぁ", xi: "ぃ", xu: "ぅ", xe: "ぇ", xo: "ぉ", la: "ぁ", li: "ぃ", lu: "ぅ", le: "ぇ", lo: "ぉ",
+    xya: "ゃ", xyu: "ゅ", xyo: "ょ", lya: "ゃ", lyu: "ゅ", lyo: "ょ", xtu: "っ", ltu: "っ", xtsu: "っ" });
+  const yo = { ya: "ゃ", yu: "ゅ", yo: "ょ" };
+  for (const [c, i] of Object.entries({ k: "き", g: "ぎ", n: "に", h: "ひ", m: "み", r: "り", b: "び", p: "ぴ", s: "し", z: "じ", t: "ち", d: "ぢ", j: "じ", c: "ち" }))
+    for (const [y, small] of Object.entries(yo)) t[c + y] = i + small;
+  return t;
+})();
+const ROMA_PREFIX = new Set(Object.keys(ROMA).flatMap(k => [...k].map((_, i) => k.slice(0, i + 1))));
+function toKana(str, final) {
+  let out = "", i = 0; const s = str.toLowerCase();
+  while (i < s.length) {
+    const ch = s[i];
+    if (!/[a-z'\-]/.test(ch)) { out += str[i]; i++; continue; }
+    if (ch === "n") {
+      const nx = s[i + 1];
+      if (nx === undefined) { out += final ? "ん" : "n"; i++; continue; }
+      if (nx === "'") { out += "ん"; i += 2; continue; }
+      if (nx === "n") { out += "ん"; i += /[aiueoy]/.test(s[i + 2] || "") ? 1 : 2; continue; } // onnna/onnanoko → おんな
+      if (!/[aiueoy]/.test(nx)) { out += "ん"; i++; continue; }
+    }
+    if (/[bcdfghjkmpqrstvwxyz]/.test(ch) && s[i + 1] === ch) { out += "っ"; i++; continue; }
+    if (ch === "t" && s[i + 1] === "c" && s[i + 2] === "h") { out += "っ"; i++; continue; } // matcha
+    let hit = 0;
+    for (const L of [4, 3, 2, 1]) if (ROMA[s.slice(i, i + L)]) { hit = L; break; }
+    if (hit) { out += ROMA[s.slice(i, i + hit)]; i += hit; continue; }
+    if (!final && ROMA_PREFIX.has(s.slice(i))) { out += s.slice(i); break; } // still typing
+    out += str[i]; i++;
+  }
+  return out;
+}
+const kataToHira = s => s.replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+const normKana = s => kataToHira(toKana(s.trim(), true)).replace(/[\s・.。、,]/g, "");
+const isKana = s => /^[ぁ-ゖーー]+$/.test(s);
+
+function kanjiReadings(k) {
+  const out = new Set();
+  (k.on || "").split("、").filter(Boolean).forEach(r => out.add(kataToHira(r)));
+  (k.kun || "").split("、").filter(Boolean).forEach(r => {
+    r = r.replace(/-/g, "");
+    out.add(r.replace(/[()]/g, ""));          // ひと(つ) → ひとつ
+    const stem = r.replace(/\(.*?\)/g, "");      // ひと(つ) → ひと (only when the stem is 2+ kana)
+    if (stem.length >= 2 || !r.includes("(")) out.add(stem);
+  });
+  out.delete("");
+  return [...out];
+}
+function normMeaning(s) {
+  return s.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim()
+    .replace(/^(to|a|an|the) /, "");
+}
+function meaningAnswers(m) {
+  const out = new Set();
+  m.split(/[;,]/).map(x => x.trim()).filter(Boolean).forEach(x => {
+    out.add(normMeaning(x.replace(/\(.*?\)/g, "")));  // "(my) father" → father
+    out.add(normMeaning(x.replace(/[()]/g, "")));     // → my father
+  });
+  if (m.split(/[;,]/).length > 1) out.add(normMeaning(m.replace(/\(.*?\)/g, "")));
+  out.delete("");
+  return [...out];
+}
+function lev(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+function checkMeaning(given, accepted) {
+  const g = normMeaning(given); if (!g) return { ok: false };
+  for (const a of accepted) {
+    const tol = a.length <= 3 ? 0 : a.length <= 6 ? 1 : 2;
+    if (lev(g, a) <= tol) return { ok: true, close: g !== a };
+  }
+  return { ok: false };
+}
+// Questions per card. Recall (meaning → write the kanji) stays self-graded.
+function questionsFor(cur) {
+  if (!state.settings.typeMode || cur.deck === "recall") return [];
+  if (cur.deck === "kanji") {
+    const k = KMAP[cur.key];
+    return [{ kind: "meaning", accept: meaningAnswers(k.meaning), show: k.meaning },
+            { kind: "reading", accept: kanjiReadings(k), show: [k.on, k.kun].filter(Boolean).join(" / "), any: true }];
+  }
+  const w = WMAP[cur.key];
+  return [{ kind: "reading", accept: [kataToHira(w.r)], show: w.r },
+          { kind: "meaning", accept: meaningAnswers(w.m), show: w.m }];
+}
+
+/* ============================== STUDY ============================== */
+function startSession(decks) { session = { decks, cur: null, shown: false, undo: [], done: 0, right: 0, typed: 0 }; lastShown = null; view = "study"; nextCard(); }
+function setupCard() { const s = session; s.shown = false; s.qs = s.cur ? questionsFor(s.cur) : []; s.qi = 0; s.res = []; s.suggest = null; s.warn = ""; s.typedVal = ""; s.shownAt = Date.now(); }
+function nextCard() { const p = pickNext(session.decks); session.cur = p.none ? null : p; session.wait = p.none ? p.nextLearn : null; setupCard(); render(); }
+
+function kanjiInfo(k, opts = {}) {
+  const exs = k.examples.map(e => {
+    const w = WMAP[e.w]; const unlocked = w.ks.every(introduced);
+    return `<div class="ex"><span class="w">${esc(e.w)}</span><span class="r">${esc(e.r)}</span><span>${esc(e.m)}</span>${opts.lock && !unlocked ? '<span class="lock">locked</span>' : ""}</div>`;
+  }).join("");
+  return `<div class="meaning">${esc(k.meaning)}</div>
+    <dl class="readings">${k.on ? `<dt>On'yomi</dt><dd>${esc(k.on)}</dd>` : ""}${k.kun ? `<dt>Kun'yomi</dt><dd>${esc(k.kun)}</dd>` : ""}</dl>
+    <div class="examples">${exs}</div>`;
+}
+function speakText(cur) {
+  if (cur.deck === "words") return WMAP[cur.key].r;
+  const k = KMAP[cur.key]; return k.examples[0] ? k.examples[0].r : "";
+}
+function resultsHtml(s) {
+  if (!s.res.length) return "";
+  return `<div class="results">${s.res.map(r => `<div class="res ${r.ok ? "ok" : "bad"}">
+      <span class="qk">${r.kind === "meaning" ? "Meaning" : "Reading"}</span>
+      <span class="given">${esc(r.given)}</span><span class="mark">${r.ok ? "✓" : "✗"}</span>
+      ${r.ok && !r.close ? "" : `<span class="exp">${r.ok ? "close enough · " : ""}${esc(r.show)}</span>`}
+    </div>`).join("")}</div>`;
+}
+function renderStudy() {
+  const s = session;
+  if (!s.cur) {
+    const later = s.wait && isFinite(s.wait) ? `<p class="hint">More learning cards come back in ${fmtIvl(s.wait - Date.now())}.</p>` : "";
+    const acc = s.typed ? ` You typed ${s.right} of ${s.typed} correctly (${Math.round(100 * s.right / s.typed)}%).` : "";
+    main.innerHTML = `<div class="panel done"><div class="kanji-big">完了</div><p><b>Nothing left right now.</b> You reviewed ${s.done} card${s.done === 1 ? "" : "s"} this session.${acc}</p>${later}
+      <button class="btn" id="back">Back to decks</button>${s.undo.length ? ' <button class="btn" id="undo">Undo last</button>' : ""}</div>`;
+    document.getElementById("back").onclick = () => go("home");
+    const u = document.getElementById("undo"); if (u) u.onclick = undo;
+    if (s.wait && isFinite(s.wait)) { clearTimeout(s.waitTimer); s.waitTimer = setTimeout(() => { if (view === "study" && !session.cur) nextCard(); }, Math.max(1000, s.wait - Date.now() + 500)); }
+    return;
+  }
+  const cur = s.cur, c = cur.c; let front = "", back = "", tag = "";
+  if (cur.deck === "kanji") {
+    const k = KMAP[cur.key]; tag = "Kanji · meaning & reading";
+    front = `<div class="kanji-big">${esc(k.k)}</div>`;
+    back = kanjiInfo(k);
+  } else if (cur.deck === "words") {
+    const w = WMAP[cur.key]; tag = "Word · reading & meaning";
+    front = `<div class="word-big">${esc(w.w)}</div>`;
+    back = `<div class="reading">${esc(w.r)}</div><div class="meaning" style="margin-top:6px">${esc(w.m)}</div>
+      <div class="breakdown">${w.ks.map(ch => `<div class="bk"><span>${ch}</span>${esc(KMAP[ch].meaning)}</div>`).join("")}</div>`;
+  } else {
+    const k = KMAP[cur.key]; tag = "Recall · write the kanji";
+    front = `<div class="prompt">${esc(k.meaning)}</div><div class="sub">Picture or write the kanji, then check.</div>`;
+    back = `<div class="kanji-big">${esc(k.k)}</div>${kanjiInfo(k)}`;
+  }
+  const asking = !s.shown && s.qi < s.qs.length;
+  const q = asking ? s.qs[s.qi] : null;
+  const status = c.t === "new" ? '<span class="c-new">new</span>' : c.t === "review" ? '<span class="c-due">review</span>' : '<span class="c-learn">learning</span>';
+  const counts = (() => { const t = { nw: 0, lr: 0, due: 0 }; s.decks.forEach(d => { const x = deckCounts(d); t.nw += x.nw; t.lr += x.lr; t.due += x.due; }); return t; })();
+  const gradeBtn = (g, cls, label) => `<button class="${cls}${s.suggest === g ? " sug" : ""}" data-g="${g}">${label}<small>${previewLabel(c, g)} · ${g}</small></button>`;
+  const anyWrong = s.res.some(r => !r.ok);
+  let below;
+  if (asking) {
+    below = `<form class="ask ${q.kind}" id="askf" autocomplete="off">
+        <label for="ans">${q.kind === "meaning" ? "Meaning <span>in English</span>" : `Reading <span>${q.any ? "any on or kun reading, " : ""}romaji turns into kana</span>`}</label>
+        <input id="ans" lang="${q.kind === "reading" ? "ja" : "en"}" autocapitalize="off" autocorrect="off" spellcheck="false"
+          placeholder="${q.kind === "meaning" ? "e.g. water" : "e.g. mizu → みず"}" value="${esc(s.typedVal || "")}">
+        <button class="btn primary" type="submit">Check</button>
+        <div class="warn">${esc(s.warn || "")}</div>
+        <button type="button" class="linkbtn" id="dunno">I don't know</button>
+      </form>`;
+  } else if (s.shown) {
+    below = `${s.res.length ? `<p class="hint" style="text-align:center;margin:12px 0 0">${anyWrong ? "Marked as <b style=\"color:var(--again)\">Again</b>." : "All correct, marked as <b style=\"color:var(--good)\">Good</b>."} Press <b>Enter</b> to accept or pick another grade.
+        ${anyWrong ? ' <button class="linkbtn" id="override">I was right</button>' : ""}</p>` : ""}
+      <div class="answer">${gradeBtn(1, "a", "Again")}${gradeBtn(2, "h", "Hard")}${gradeBtn(3, "g", "Good")}${gradeBtn(4, "e", "Easy")}</div>`;
+  } else {
+    below = `<button class="btn primary big" id="show">Show answer <span class="kbd" style="color:inherit;opacity:.8">· Space</span></button>`;
+  }
+  main.innerHTML = `
+    <div class="studybar">
+      <button class="btn" id="back">← Decks</button>
+      <span class="hint">${status}</span>
+      <span class="counts" style="margin-left:auto"><span class="c-new">${counts.nw}</span><span class="c-learn">${counts.lr}</span><span class="c-due">${counts.due}</span></span>
+    </div>
+    <div class="panel card">
+      <span class="tag">${tag}</span>
+      <button class="speak" id="speak" title="Speak (S)" aria-label="Speak">🔊</button>
+      ${front}
+      ${resultsHtml(s)}
+      ${s.shown ? `<hr class="div">${back}` : ""}
+    </div>
+    ${below}
+    <div style="text-align:center;margin-top:8px">${s.undo.length ? '<button class="btn" id="undo">Undo (Z)</button>' : ""}</div>`;
+  document.getElementById("back").onclick = () => go("home");
+  // Speaking the reading before it's answered would give it away.
+  document.getElementById("speak").onclick = () => { if (s.shown) speak(speakText(cur)); };
+  const show = document.getElementById("show"); if (show) show.onclick = reveal;
+  main.querySelectorAll("[data-g]").forEach(b => b.onclick = () => answer(+b.dataset.g));
+  const u = document.getElementById("undo"); if (u) u.onclick = undo;
+  const ov = document.getElementById("override");
+  if (ov) ov.onclick = () => { s.res.forEach(r => r.ok = true); s.suggest = 3; s.right++; render(); };
+  if (asking) {
+    const inp = document.getElementById("ans"), form = document.getElementById("askf");
+    let composing = false;
+    inp.addEventListener("compositionstart", () => composing = true);
+    inp.addEventListener("compositionend", () => composing = false);
+    if (q.kind === "reading") inp.addEventListener("input", () => {
+      if (composing || !/[a-zA-Z\-]/.test(inp.value)) return;
+      const v = toKana(inp.value, false); if (v !== inp.value) inp.value = v;
+    });
+    inp.addEventListener("keydown", e => e.stopPropagation()); // keep 1-4 / Space / Z out of the global shortcuts
+    form.onsubmit = e => { e.preventDefault(); submitTyped(inp.value); };
+    document.getElementById("dunno").onclick = () => submitTyped("", true);
+    inp.focus();
+  } else {
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  }
+}
+function submitTyped(raw, gaveUp) {
+  const s = session, q = s.qs[s.qi]; let given = raw.trim(), r;
+  if (!gaveUp && !given) { s.warn = "Type an answer, or press “I don't know”."; s.typedVal = ""; return render(); }
+  if (gaveUp) r = { ok: false };
+  else if (q.kind === "reading") {
+    given = normKana(given);
+    if (!isKana(given)) { s.warn = "That doesn't look like kana. Type it in romaji (e.g. mizu) or with a Japanese keyboard."; s.typedVal = raw; return render(); }
+    r = { ok: q.accept.includes(given) };
+  } else {
+    if (/[぀-ヿ一-鿿]/.test(given)) { s.warn = "This one asks for the English meaning."; s.typedVal = ""; return render(); }
+    r = checkMeaning(given, q.accept);
+  }
+  s.res.push({ kind: q.kind, given: gaveUp ? "—" : given, ok: r.ok, close: r.close, show: q.show });
+  s.warn = ""; s.typedVal = ""; s.qi++;
+  if (s.qi >= s.qs.length) {
+    const ok = s.res.every(x => x.ok); s.suggest = ok ? 3 : 1; s.typed++; if (ok) s.right++;
+    reveal();
+  } else render();
+}
+function reveal() { if (!session || !session.cur || session.shown) return; session.shown = true; render(); if (state.settings.autoSpeak) speak(speakText(session.cur)); }
+function answer(g) {
+  const s = session; if (!s || !s.cur || !s.shown) return;
+  rollDay();
+  const cur = s.cur, now = Date.now();
+  s.undo.push({ id: cur.id, prev: state.cards[cur.id] ? { ...state.cards[cur.id] } : null, daily: JSON.parse(JSON.stringify(state.daily)), hist: state.history[today()] || 0,
+    typed: s.res.length ? 1 : 0, right: s.res.length && s.suggest === 3 && s.res.every(r => r.ok) ? 1 : 0 });
+  if (s.undo.length > 20) s.undo.shift();
+  s.undo[s.undo.length - 1].ts = now;
+  if (cur.c.t === "new") state.daily.newDone[cur.deck] = (state.daily.newDone[cur.deck] || 0) + 1;
+  const before = cur.c, after = schedule(cur.c, g, now, false);
+  state.cards[cur.id] = after;
+  state.daily.reviews++; state.history[today()] = (state.history[today()] || 0) + 1;
+  const typed = s.res.length > 0;
+  store.review({
+    card: cardToRow(cur.id, after), daily: dailyRow(),
+    review: { ts_ms: now, study_day: today(), card_id: cur.id, deck: cur.deck, item: cur.key, grade: g,
+      typed: typed ? 1 : 0, typed_correct: typed ? (s.res.every(r => r.ok) ? 1 : 0) : null,
+      answers_json: typed ? JSON.stringify(s.res.map(r => ({ q: r.kind, given: r.given, ok: r.ok }))) : null,
+      answer_ms: s.shownAt ? now - s.shownAt : null,
+      state_before: before.t, interval_before: before.ivl || 0, ease_before: before.e, due_before_ms: before.due || null,
+      state_after: after.t, interval_after: after.ivl || 0, ease_after: after.e, due_after_ms: after.due },
+  });
+  s.done++; lastShown = cur.id; nextCard();
+}
+function undo() {
+  const s = session; if (!s || !s.undo.length) return;
+  const u = s.undo.pop();
+  if (u.prev) state.cards[u.id] = u.prev; else delete state.cards[u.id];
+  state.daily = u.daily; if (u.hist) state.history[today()] = u.hist; else delete state.history[today()];
+  s.done = Math.max(0, s.done - 1); s.typed -= u.typed || 0; s.right -= u.right || 0;
+  store.undoReview({ cardId: u.id, prevCard: u.prev ? cardToRow(u.id, u.prev) : null, ts: u.ts, daily: dailyRow() });
+  const [deckLetter, ...rest] = u.id.split(":"); const key = rest.join(":");
+  const deck = DECKS.find(d => d.id[0] === deckLetter).id;
+  s.cur = { id: u.id, key, deck, c: getCard(u.id) }; setupCard(); lastShown = null; render();
+}
+document.addEventListener("keydown", e => {
+  if (view !== "study" || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (["INPUT", "TEXTAREA"].includes(document.activeElement && document.activeElement.tagName)) return;
+  const s = session; if (!s) return;
+  if (e.key === " " || e.key === "Enter") {
+    e.preventDefault();
+    if (s.cur && !s.shown && s.qi >= s.qs.length) reveal();
+    else if (s.cur && s.shown) answer(s.suggest || 3);
+  }
+  else if (["1", "2", "3", "4"].includes(e.key)) answer(+e.key);
+  else if (e.key === "z" || e.key === "Z") undo();
+  else if (e.key === "s" || e.key === "S") { if (s.cur && s.shown) speak(speakText(s.cur)); }
+});
+
+function tileClass(c) { if (c.t === "new") return ""; if (c.t === "review") return c.ivl >= 21 ? "mature" : "young"; return "learn"; }
+function renderBrowse() {
+  const tiles = KANJI.map(k => `<button class="tile ${tileClass(getCard(cardId("kanji", k.k)))}" data-k="${k.k}" title="${esc(k.meaning)}">${k.k}</button>`).join("");
+  main.innerHTML = `<div class="panel">
+    <b>${KANJI.length} kanji · ${WORDS.length} words</b>
+    <div class="legend"><span><i style="background:var(--tile-new)"></i>Not started</span><span><i style="background:var(--tile-learn)"></i>Learning</span><span><i style="background:var(--tile-young)"></i>Young</span><span><i style="background:var(--tile-mature)"></i>Mature (21d+)</span></div>
+    <div class="grid">${tiles}</div></div>`;
+  main.querySelectorAll("[data-k]").forEach(b => b.onclick = () => openKanji(b.dataset.k));
+}
+function cardLine(label, c) {
+  if (c.t === "new") return `${label}: not started`;
+  const next = c.t === "review" ? `next in ${fmtIvl(Math.max(0, c.due - Date.now()))}` : "learning";
+  return `${label}: ${next}, ${c.r} reviews, ${c.l || 0} lapses, ease ${Math.round(c.e * 100)}%`;
+}
+function openKanji(ch) {
+  const k = KMAP[ch]; const root = document.getElementById("modal-root");
+  root.innerHTML = `<div class="modal-bg" id="mbg"><div class="panel modal">
+    <button class="close" id="mclose" aria-label="Close">✕</button>
+    <div class="kanji-big">${k.k}</div>${kanjiInfo(k, { lock: true })}
+    <div class="cardstats">${cardLine("Kanji card", getCard(cardId("kanji", ch)))}<br>${cardLine("Recall card", getCard(cardId("recall", ch)))}</div>
+    <button class="btn" id="mspeak" style="margin-top:12px">🔊 Hear examples</button>
+  </div></div>`;
+  const close = () => root.innerHTML = "";
+  document.getElementById("mclose").onclick = close;
+  document.getElementById("mbg").onclick = e => { if (e.target.id === "mbg") close(); };
+  document.getElementById("mspeak").onclick = () => speak(k.examples.map(e => e.r).join("、"));
+}
+
+function renderSettings() {
+  const np = state.settings.newPerDay;
+  main.innerHTML = `<div class="panel">
+    <h2 style="margin-top:0">New cards per day</h2>
+    ${DECKS.map(d => `<div class="row"><label for="np-${d.id}">${d.name}<br><span class="hint">${d.desc}</span></label><input type="number" min="0" max="200" id="np-${d.id}" value="${np[d.id]}"></div>`).join("")}
+    <div class="row"><label for="typemode">Type your answers<br><span class="hint">Kanji and word cards ask for the meaning and the reading, check them and grade for you. Turn off to flip and grade yourself, like Anki.</span></label><input type="checkbox" id="typemode" ${state.settings.typeMode ? "checked" : ""}></div>
+    <div class="row"><label for="autospeak">Speak the reading when the answer is shown</label><input type="checkbox" id="autospeak" ${state.settings.autoSpeak ? "checked" : ""}></div>
+    <h2>Scheduling</h2>
+    <p class="hint">Anki defaults: learning steps 1m and 10m, graduating interval 1 day, easy interval 4 days, starting ease 250%, relearning step 10m, new day starts at 4 a.m.</p>
+    <h2>Backup</h2>
+    <div id="backup-panel"></div>
+    <h2>Reset</h2>
+    <button class="btn" id="reset">Reset all progress</button>
+    <div class="msg" id="resetmsg"></div>
+  </div>`;
+  DECKS.forEach(d => document.getElementById("np-" + d.id).onchange = e => {
+    const v = Math.max(0, Math.min(200, parseInt(e.target.value, 10) || 0)); e.target.value = v;
+    state.settings.newPerDay[d.id] = v; store.settings();
+  });
+  document.getElementById("typemode").onchange = e => { state.settings.typeMode = e.target.checked; store.settings(); };
+  document.getElementById("autospeak").onchange = e => { state.settings.autoSpeak = e.target.checked; store.settings(); };
+  renderBackupPanel(document.getElementById("backup-panel"));
+  let armed = false;
+  document.getElementById("reset").onclick = e => {
+    if (!armed) { armed = true; e.target.textContent = "Click again to erase everything"; document.getElementById("resetmsg").textContent = "This can't be undone. Save a backup first if you might want it."; return; }
+    const keep = state.settings; state = freshState(); state.settings = keep; store.replaceState(true);
+    e.target.textContent = "Reset all progress"; armed = false; document.getElementById("resetmsg").textContent = "Progress erased.";
+  };
+}
+
+boot();
+setInterval(() => { if (view === "home") renderHome(); }, 60000);
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+</script>
+</body>
+</html>
