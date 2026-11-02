@@ -103,6 +103,23 @@ hr.div{width:100%;border:none;border-top:1px dashed var(--line);margin:20px 0}
 .res .qk{font-size:12px;color:var(--muted);min-width:56px;text-transform:uppercase;letter-spacing:.06em}
 .res .given{font-weight:600} .res.ok .mark{color:var(--good)} .res.bad .mark{color:var(--again)}
 .res .exp{color:var(--muted);font-size:14px;margin-left:auto}
+/* answer card shown after a wrong answer, WaniKani style */
+.fbcard{width:100%;max-width:440px;margin:14px auto 0;border:2px solid var(--again);border-radius:14px;background:var(--panel);text-align:left;overflow:hidden}
+.fbcard .fbhead{background:var(--again);color:#fff;padding:8px 14px;font-weight:700;display:flex;gap:8px;align-items:baseline}
+.fbcard .fbhead .given{font-weight:400;opacity:.9;margin-left:auto;font-size:14px}
+.fbcard .fbhead .given b{font-weight:600}
+.fbcard .fbbody{padding:12px 14px}
+.fbsec{padding:8px 10px;border-radius:10px}
+.fbsec + .fbsec{margin-top:6px}
+.fbsec.miss{background:color-mix(in srgb,var(--again) 10%,transparent)}
+.fbsec h3{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.fbsec .main{font-size:22px;font-weight:600}
+.fbsec .alt{color:var(--muted);font-size:14px;margin-top:2px}
+.fbsec .rd{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline}
+.fbsec .rd dt{color:var(--muted);font-size:13px}
+.fbsec .rd dd{margin:0;font-family:"Noto Sans JP",sans-serif;font-size:22px}
+.fbsec .rd dd.none{font-size:15px;color:var(--muted)}
+.fbcard .breakdown{justify-content:flex-start;margin-top:8px}
 .answer button.sug{outline:2px solid currentColor;outline-offset:-2px}
 
 .done{text-align:center;padding:48px 16px}
@@ -1027,7 +1044,7 @@ const withExtra = (list, extra) => [...new Set([...list, ...(extra || []).flatMa
 
 /* ============================== STUDY ============================== */
 function startSession(decks) { session = { decks, cur: null, shown: false, undo: [], done: 0, right: 0, typed: 0 }; lastShown = null; view = "study"; nextCard(); }
-function setupCard() { const s = session; s.shown = false; s.qs = s.cur ? questionsFor(s.cur) : []; s.qi = 0; s.res = []; s.suggest = null; s.warn = ""; s.typedVal = ""; s.shownAt = Date.now(); }
+function setupCard() { const s = session; s.shown = false; s.qs = s.cur ? questionsFor(s.cur) : []; s.qi = 0; s.res = []; s.suggest = null; s.fb = null; s.warn = ""; s.typedVal = ""; s.shownAt = Date.now(); }
 function nextCard() { const p = pickNext(session.decks); session.cur = p.none ? null : p; session.wait = p.none ? p.nextLearn : null; setupCard(); render(); }
 
 function kanjiInfo(k, opts = {}) {
@@ -1038,6 +1055,36 @@ function kanjiInfo(k, opts = {}) {
   return `<div class="meaning">${esc(k.meaning)}</div>
     <dl class="readings">${k.on ? `<dt>On'yomi</dt><dd>${esc(k.on)}</dd>` : ""}${k.kun ? `<dt>Kun'yomi</dt><dd>${esc(k.kun)}</dd>` : ""}</dl>
     <div class="examples">${exs}</div>`;
+}
+// The answer card shown right after a wrong answer: meanings, then readings. On'yomi are
+// written in katakana and kun'yomi in hiragana (as the data stores them); word readings in hiragana.
+// `misses` is the list of wrong answers [{ kind, given }].
+function answerCard(cur, misses) {
+  const missed = kind => misses.some(x => x.kind === kind);
+  const sec = (kind, title, body) => `<div class="fbsec${missed(kind) ? " miss" : ""}"><h3>${title}</h3>${body}</div>`;
+  const alts = list => list && list.length ? `<div class="alt">Also accepted: ${esc(list.join(", "))}</div>` : "";
+  const join = s => (s || "").split("、").filter(Boolean).join("、 ");
+  let m, r, extra = "";
+  if (cur.deck === "words") {
+    const w = WMAP[cur.key];
+    m = sec("meaning", "Meaning", `<div class="main">${esc(w.m)}</div>${alts(w.acceptM)}`);
+    r = sec("reading", "Reading", `<div class="main" style="font-family:'Noto Sans JP',sans-serif">${esc([w.r, ...(w.acceptR || [])].join("、 "))}</div>`);
+    extra = `<div class="breakdown">${w.ks.map(ch => `<div class="bk"><span>${ch}</span>${esc(KMAP[ch].meaning)}</div>`).join("")}</div>`;
+  } else {
+    const k = KMAP[cur.key];
+    m = sec("meaning", "Meaning", `<div class="main">${esc(k.meaning)}</div>${alts(k.acceptM)}`);
+    r = sec("reading", "Readings <span style=\"text-transform:none;letter-spacing:0\">· any one is accepted</span>", `<dl class="rd">
+        <dt>On'yomi</dt><dd${k.on ? "" : ' class="none"'}>${k.on ? esc(join(k.on)) : "none"}</dd>
+        <dt>Kun'yomi</dt><dd${k.kun ? "" : ' class="none"'}>${k.kun ? esc(join(k.kun)) : "none"}</dd></dl>`);
+  }
+  const label = x => x.kind === "meaning" ? "Meaning" : "Reading";
+  const head = misses.length === 1
+    ? `<div class="fbhead">✗ ${label(misses[0])}<span class="given">${misses[0].given !== "—" ? `You typed <b>${esc(misses[0].given)}</b>` : "Skipped"}</span></div>`
+    : `<div class="fbhead">✗ ${misses.map(label).join(" and ")}</div>`;
+  // Lead with what you missed, so that answer is the first thing you see.
+  if (cur.deck === "kanji" && KMAP[cur.key].examples.length)
+    extra = `<div class="examples" style="margin-top:10px">${KMAP[cur.key].examples.map(e => `<div class="ex"><span class="w">${esc(e.w)}</span><span class="r">${esc(e.r)}</span><span>${esc(e.m)}</span></div>`).join("")}</div>`;
+  return `<div class="fbcard">${head}<div class="fbbody">${missed("reading") && !missed("meaning") ? r + m : m + r}${extra}</div></div>`;
 }
 function speakText(cur) {
   if (cur.deck === "words") return WMAP[cur.key].r;
@@ -1078,7 +1125,8 @@ function renderStudy() {
     front = `<div class="prompt">${esc(k.meaning)}</div><div class="sub">Picture or write the kanji, then check.</div>`;
     back = `<div class="kanji-big">${esc(k.k)}</div>${kanjiInfo(k)}`;
   }
-  const asking = !s.shown && s.qi < s.qs.length;
+  const fb = !s.shown && s.fb;
+  const asking = !s.shown && !fb && s.qi < s.qs.length;
   const q = asking ? s.qs[s.qi] : null;
   const status = c.t === "new" ? '<span class="c-new">new</span>' : c.t === "review" ? '<span class="c-due">review</span>' : '<span class="c-learn">learning</span>';
   const counts = (() => { const t = { nw: 0, lr: 0, due: 0 }; s.decks.forEach(d => { const x = deckCounts(d); t.nw += x.nw; t.lr += x.lr; t.due += x.due; }); return t; })();
@@ -1094,6 +1142,8 @@ function renderStudy() {
         <div class="warn">${esc(s.warn || "")}</div>
         <button type="button" class="linkbtn" id="dunno">I don't know</button>
       </form>`;
+  } else if (fb) {
+    below = `<button class="btn primary big" id="cont">Continue to the ${s.qs[s.qi].kind} <span class="kbd" style="color:inherit;opacity:.8">· Enter</span></button>`;
   } else if (s.shown) {
     below = `${s.res.length ? `<p class="hint" style="text-align:center;margin:12px 0 0">${anyWrong ? "Marked as <b style=\"color:var(--again)\">Again</b>." : "All correct, marked as <b style=\"color:var(--good)\">Good</b>."} Press <b>Enter</b> to accept or pick another grade.
         ${anyWrong ? ' <button class="linkbtn" id="override">I was right</button>' : ""}</p>` : ""}
@@ -1112,7 +1162,8 @@ function renderStudy() {
       <button class="speak" id="speak" title="Speak (S)" aria-label="Speak">🔊</button>
       ${front}
       ${resultsHtml(s)}
-      ${s.shown ? `<hr class="div">${back}` : ""}
+      ${fb ? answerCard(cur, [fb]) : ""}
+      ${s.shown ? (anyWrong ? answerCard(cur, s.res.filter(r => !r.ok)) : `<hr class="div">${back}`) : ""}
     </div>
     ${below}
     <div style="text-align:center;margin-top:8px">${s.undo.length ? '<button class="btn" id="undo">Undo (Z)</button>' : ""}</div>`;
@@ -1120,6 +1171,7 @@ function renderStudy() {
   // Speaking the reading before it's answered would give it away.
   document.getElementById("speak").onclick = () => { if (s.shown) speak(speakText(cur)); };
   const show = document.getElementById("show"); if (show) show.onclick = reveal;
+  const cont = document.getElementById("cont"); if (cont) cont.onclick = continueAfterMiss;
   main.querySelectorAll("[data-g]").forEach(b => b.onclick = () => answer(+b.dataset.g));
   const u = document.getElementById("undo"); if (u) u.onclick = undo;
   const ov = document.getElementById("override");
@@ -1155,11 +1207,15 @@ function submitTyped(raw, gaveUp) {
   }
   s.res.push({ kind: q.kind, given: gaveUp ? "—" : given, ok: r.ok, close: r.close, show: q.show });
   s.warn = ""; s.typedVal = ""; s.qi++;
+  // A miss with a question still to come stops on the answer card first. A miss on the last
+  // question goes straight to the full answer below.
+  if (!r.ok && s.qi < s.qs.length) { s.fb = { kind: q.kind, given: gaveUp ? "—" : given }; return render(); }
   if (s.qi >= s.qs.length) {
     const ok = s.res.every(x => x.ok); s.suggest = ok ? 3 : 1; s.typed++; if (ok) s.right++;
     reveal();
   } else render();
 }
+function continueAfterMiss() { if (!session || !session.fb) return; session.fb = null; render(); }
 function reveal() { if (!session || !session.cur || session.shown) return; session.shown = true; render(); if (state.settings.autoSpeak) speak(speakText(session.cur)); }
 function answer(g) {
   const s = session; if (!s || !s.cur || !s.shown) return;
@@ -1202,7 +1258,8 @@ document.addEventListener("keydown", e => {
   const s = session; if (!s) return;
   if (e.key === " " || e.key === "Enter") {
     e.preventDefault();
-    if (s.cur && !s.shown && s.qi >= s.qs.length) reveal();
+    if (s.cur && !s.shown && s.fb) continueAfterMiss();
+    else if (s.cur && !s.shown && s.qi >= s.qs.length) reveal();
     else if (s.cur && s.shown) answer(s.suggest || 3);
   }
   else if (["1", "2", "3", "4"].includes(e.key)) answer(+e.key);
