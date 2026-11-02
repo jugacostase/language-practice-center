@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#b8322a">
+<meta name="theme-color" content="#1d3557">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -16,19 +16,24 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@500;700&display=swap" rel="stylesheet">
 <style>
+/* Palette: #e63946 red · #f1faee mint white · #a8dadc powder blue · #457b9d steel blue · #1d3557 navy */
 :root{
-  --bg:#f7f5f0; --panel:#ffffff; --ink:#1d1d1f; --muted:#6b6b72; --line:#e4e1d9;
-  --accent:#b8322a; --new:#2f6fd6; --learn:#d0582a; --due:#2e8b57;
-  --again:#c0392b; --hard:#8a6d3b; --good:#2e8b57; --easy:#2f6fd6;
-  --tile-new:#ecebe6; --tile-learn:#f6d3b8; --tile-young:#cfe9d6; --tile-mature:#7cc49a;
-  --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.05);
+  --bg:#f1faee; --panel:#ffffff; --ink:#1d3557; --muted:#56698a; --line:#cfe3e2;
+  --accent:#e63946; --primary:#1d3557; --on-primary:#f1faee;
+  --new:#457b9d; --learn:#e63946; --due:#1d3557;
+  --again:#e63946; --hard:#56698a; --good:#457b9d; --easy:#1d3557;
+  --tile-new:#eef6f2; --tile-learn:#fbd7da; --tile-young:#d3ecec; --tile-mature:#a8dadc;
+  --scrim:rgba(29,53,87,.45);
+  --shadow:0 1px 2px rgba(29,53,87,.06),0 4px 16px rgba(29,53,87,.06);
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --bg:#16161a; --panel:#1f1f25; --ink:#ececf1; --muted:#9a9aa5; --line:#2e2e36;
-    --accent:#e0675e; --new:#6aa0ff; --learn:#ff9a62; --due:#5fcf8e;
-    --again:#e0675e; --hard:#c9a46a; --good:#5fcf8e; --easy:#6aa0ff;
-    --tile-new:#2a2a31; --tile-learn:#5a3a26; --tile-young:#24452f; --tile-mature:#2f7a4c;
+    --bg:#13243c; --panel:#1d3557; --ink:#f1faee; --muted:#9fb6c9; --line:#2d4b72;
+    --accent:#f47a83; --primary:#a8dadc; --on-primary:#1d3557;
+    --new:#a8dadc; --learn:#f47a83; --due:#f1faee;
+    --again:#f47a83; --hard:#9fb6c9; --good:#a8dadc; --easy:#f1faee;
+    --tile-new:#24406a; --tile-learn:#5c2a3c; --tile-young:#2d5a72; --tile-mature:#457b9d;
+    --scrim:rgba(8,16,30,.6);
     --shadow:none;
   }
 }
@@ -55,7 +60,7 @@ nav button.on{border-color:var(--line);background:var(--panel);color:var(--ink)}
 .counts{margin-left:auto;display:flex;gap:12px;font-variant-numeric:tabular-nums;font-weight:600}
 .c-new{color:var(--new)} .c-learn{color:var(--learn)} .c-due{color:var(--due)}
 .btn{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 14px}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary);font-weight:600}
 .btn:disabled{opacity:.45;cursor:default}
 .big{display:block;width:100%;padding:14px;font-size:17px;margin:16px 0}
 .hint{color:var(--muted);font-size:13px}
@@ -105,7 +110,7 @@ hr.div{width:100%;border:none;border-top:1px dashed var(--line);margin:20px 0}
 .res .exp{color:var(--muted);font-size:14px;margin-left:auto}
 /* answer card shown after a wrong answer, WaniKani style */
 .fbcard{width:100%;max-width:440px;margin:14px auto 0;border:2px solid var(--again);border-radius:14px;background:var(--panel);text-align:left;overflow:hidden}
-.fbcard .fbhead{background:var(--again);color:#fff;padding:8px 14px;font-weight:700;display:flex;gap:8px;align-items:baseline}
+.fbcard .fbhead{background:#e63946;color:#fff;padding:8px 14px;font-weight:700;display:flex;gap:8px;align-items:baseline}
 .fbcard .fbhead .given{font-weight:400;opacity:.9;margin-left:auto;font-size:14px}
 .fbcard .fbhead .given b{font-weight:600}
 .fbcard .fbbody{padding:12px 14px}
@@ -133,7 +138,7 @@ hr.div{width:100%;border:none;border-top:1px dashed var(--line);margin:20px 0}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px}
 .tile{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:"Noto Serif JP",serif;font-size:28px;background:var(--tile-new)}
 .tile.learn{background:var(--tile-learn)} .tile.young{background:var(--tile-young)} .tile.mature{background:var(--tile-mature)}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal-bg{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
 .modal{max-width:520px;width:100%;max-height:90vh;overflow:auto;position:relative;text-align:center}
 .modal .close{position:absolute;top:8px;right:8px;border:none;background:none;font-size:20px;color:var(--muted)}
 .cardstats{font-size:12px;color:var(--muted);margin-top:12px}
