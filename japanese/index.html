@@ -120,6 +120,9 @@ hr.div{width:100%;border:none;border-top:1px dashed var(--line);margin:20px 0}
 .fbsec .rd dd{margin:0;font-family:"Noto Sans JP",sans-serif;font-size:22px}
 .fbsec .rd dd.none{font-size:15px;color:var(--muted)}
 .fbcard .breakdown{justify-content:flex-start;margin-top:8px}
+.flash{text-align:center;font-size:14px;font-weight:600;padding:6px 12px;border-radius:10px;margin:-4px auto 10px;width:fit-content;animation:flashfade 2.4s ease forwards}
+.flash.ok{color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent)} .flash.bad{color:var(--again);background:color-mix(in srgb,var(--again) 14%,transparent)}
+@keyframes flashfade{0%,80%{opacity:1}100%{opacity:.35}}
 .answer button.sug{outline:2px solid currentColor;outline-offset:-2px}
 
 .done{text-align:center;padding:48px 16px}
@@ -347,7 +350,7 @@ const cardId = (deck, key) => deck[0] + ":" + key; // k:日, w:毎日, r:日
 const LS_KEY = "kanji-srs-v1";
 function freshState() {
   return { v: 1, updatedAt: 0, cards: {}, daily: { day: -1, newDone: {}, reviews: 0 }, history: {},
-    settings: { newPerDay: Object.fromEntries(DECKS.map(d => [d.id, d.def])), autoSpeak: false, typeMode: true, backupEveryDays: 3 } };
+    settings: { newPerDay: Object.fromEntries(DECKS.map(d => [d.id, d.def])), autoSpeak: false, typeMode: true, autoGrade: true, backupEveryDays: 3 } };
 }
 function normalize(s) {
   const f = freshState();
@@ -934,7 +937,7 @@ function renderHome() {
     </div>
     <button class="btn primary big" id="studyAll" ${any ? "" : "disabled"}>${any ? `Study all · <span>${totals.nw} new, ${totals.lr} learning, ${totals.due} due</span>` : "All done for today 🎉"}</button>
     <div class="decks">${rows}</div>
-    <p class="hint" style="margin-top:16px">Counts are <span class="c-new">new</span> · <span class="c-learn">learning</span> · <span class="c-due">due</span>. Type your answer and press <b>Enter</b>; romaji turns into kana for readings. After checking, <b>Enter</b> accepts the grade, <b>1–4</b> picks another, <b>Z</b> undoes, <b>S</b> speaks.</p>`;
+    <p class="hint" style="margin-top:16px">Counts are <span class="c-new">new</span> · <span class="c-learn">learning</span> · <span class="c-due">due</span>. Type your answer and press <b>Enter</b>; romaji turns into kana for readings. Cards are graded from your answers (turn that off in Settings to grade yourself with <b>1–4</b>). <b>Enter</b> moves on, <b>Z</b> undoes the last card, <b>S</b> speaks.</p>`;
   document.getElementById("studyAll").onclick = () => startSession(DECKS.map(d => d.id));
   wireBackupBanner();
   main.querySelectorAll("[data-deck]").forEach(b => b.onclick = () => startSession([b.dataset.deck]));
@@ -1132,6 +1135,9 @@ function renderStudy() {
   const counts = (() => { const t = { nw: 0, lr: 0, due: 0 }; s.decks.forEach(d => { const x = deckCounts(d); t.nw += x.nw; t.lr += x.lr; t.due += x.due; }); return t; })();
   const gradeBtn = (g, cls, label) => `<button class="${cls}${s.suggest === g ? " sug" : ""}" data-g="${g}">${label}<small>${previewLabel(c, g)} · ${g}</small></button>`;
   const anyWrong = s.res.some(r => !r.ok);
+  // One-off note about the card just graded automatically (shown once, fades out).
+  const flash = s.flash ? `<div class="flash ${s.flash.ok ? "ok" : "bad"}">${s.flash.ok ? "✓ Correct" : "✗ Again"} · ${esc(s.flash.item)} back in ${s.flash.ivl} · <button class="linkbtn" id="flashundo" style="color:inherit">undo</button></div>` : "";
+  s.flash = null;
   let below;
   if (asking) {
     below = `<form class="ask ${q.kind}" id="askf" autocomplete="off">
@@ -1143,7 +1149,11 @@ function renderStudy() {
         <button type="button" class="linkbtn" id="dunno">I don't know</button>
       </form>`;
   } else if (fb) {
-    below = `<button class="btn primary big" id="cont">Continue to the ${s.qs[s.qi].kind} <span class="kbd" style="color:inherit;opacity:.8">· Enter</span></button>`;
+    below = `<button class="btn primary big" id="cont">Continue to the ${s.qs[s.qi].kind} <span class="kbd" style="color:inherit;opacity:.8">· Enter</span></button>
+      <p class="hint" style="text-align:center;margin:0"><button class="linkbtn" id="fbright">I was right</button></p>`;
+  } else if (s.shown && autoGrading(s)) {
+    below = `<button class="btn primary big" id="next">Next card <span class="kbd" style="color:inherit;opacity:.8">· Enter</span></button>
+      <p class="hint" style="text-align:center;margin:0">Marked wrong, so it comes back in ${previewLabel(c, 1)}. <button class="linkbtn" id="override">I was right</button></p>`;
   } else if (s.shown) {
     below = `${s.res.length ? `<p class="hint" style="text-align:center;margin:12px 0 0">${anyWrong ? "Marked as <b style=\"color:var(--again)\">Again</b>." : "All correct, marked as <b style=\"color:var(--good)\">Good</b>."} Press <b>Enter</b> to accept or pick another grade.
         ${anyWrong ? ' <button class="linkbtn" id="override">I was right</button>' : ""}</p>` : ""}
@@ -1157,6 +1167,7 @@ function renderStudy() {
       <span class="hint">${status}</span>
       <span class="counts" style="margin-left:auto"><span class="c-new">${counts.nw}</span><span class="c-learn">${counts.lr}</span><span class="c-due">${counts.due}</span></span>
     </div>
+    ${flash}
     <div class="panel card">
       <span class="tag">${tag}</span>
       <button class="speak" id="speak" title="Speak (S)" aria-label="Speak">🔊</button>
@@ -1172,10 +1183,13 @@ function renderStudy() {
   document.getElementById("speak").onclick = () => { if (s.shown) speak(speakText(cur)); };
   const show = document.getElementById("show"); if (show) show.onclick = reveal;
   const cont = document.getElementById("cont"); if (cont) cont.onclick = continueAfterMiss;
+  const fbr = document.getElementById("fbright"); if (fbr) fbr.onclick = () => { s.res[s.res.length - 1].ok = true; continueAfterMiss(); };
+  const nx = document.getElementById("next"); if (nx) nx.onclick = () => answer(s.suggest || 1);
   main.querySelectorAll("[data-g]").forEach(b => b.onclick = () => answer(+b.dataset.g));
   const u = document.getElementById("undo"); if (u) u.onclick = undo;
+  const fu = document.getElementById("flashundo"); if (fu) fu.onclick = undo;
   const ov = document.getElementById("override");
-  if (ov) ov.onclick = () => { s.res.forEach(r => r.ok = true); s.suggest = 3; s.right++; render(); };
+  if (ov) ov.onclick = overrideRight;
   if (asking) {
     const inp = document.getElementById("ans"), form = document.getElementById("askf");
     let composing = false;
@@ -1212,9 +1226,14 @@ function submitTyped(raw, gaveUp) {
   if (!r.ok && s.qi < s.qs.length) { s.fb = { kind: q.kind, given: gaveUp ? "—" : given }; return render(); }
   if (s.qi >= s.qs.length) {
     const ok = s.res.every(x => x.ok); s.suggest = ok ? 3 : 1; s.typed++; if (ok) s.right++;
+    // Auto-grading moves straight on, unless the last answer was a miss whose answer you haven't seen yet.
+    if (autoGrading(s) && (ok || s.res[s.res.length - 1].ok)) { s.shown = true; return answer(s.suggest); }
     reveal();
   } else render();
 }
+// WaniKani style: grade from the typed answers, no grade buttons. All right → Good, any miss → Again.
+const autoGrading = s => state.settings.typeMode && state.settings.autoGrade && s.qs.length > 0;
+function overrideRight() { const s = session; s.res.forEach(r => r.ok = true); s.suggest = 3; s.right++; if (autoGrading(s)) answer(3); else render(); }
 function continueAfterMiss() { if (!session || !session.fb) return; session.fb = null; render(); }
 function reveal() { if (!session || !session.cur || session.shown) return; session.shown = true; render(); if (state.settings.autoSpeak) speak(speakText(session.cur)); }
 function answer(g) {
@@ -1227,6 +1246,7 @@ function answer(g) {
   s.undo[s.undo.length - 1].ts = now;
   if (cur.c.t === "new") state.daily.newDone[cur.deck] = (state.daily.newDone[cur.deck] || 0) + 1;
   const before = cur.c, after = schedule(cur.c, g, now, false);
+  s.flash = autoGrading(s) ? { ok: g >= 3, item: cur.key, ivl: fmtIvl(after.due - now) } : null;
   state.cards[cur.id] = after;
   state.daily.reviews++; state.history[today()] = (state.history[today()] || 0) + 1;
   const typed = s.res.length > 0;
@@ -1260,9 +1280,9 @@ document.addEventListener("keydown", e => {
     e.preventDefault();
     if (s.cur && !s.shown && s.fb) continueAfterMiss();
     else if (s.cur && !s.shown && s.qi >= s.qs.length) reveal();
-    else if (s.cur && s.shown) answer(s.suggest || 3);
+    else if (s.cur && s.shown) answer(s.suggest || (autoGrading(s) ? 1 : 3));
   }
-  else if (["1", "2", "3", "4"].includes(e.key)) answer(+e.key);
+  else if (["1", "2", "3", "4"].includes(e.key)) { if (!autoGrading(s)) answer(+e.key); }
   else if (e.key === "z" || e.key === "Z") undo();
   else if (e.key === "s" || e.key === "S") { if (s.cur && s.shown) speak(speakText(s.cur)); }
 });
@@ -1304,6 +1324,7 @@ function renderSettings() {
     <h2 style="margin-top:0">New cards per day</h2>
     ${DECKS.map(d => `<div class="row"><label for="np-${d.id}">${d.name}<br><span class="hint">${d.desc}</span></label><input type="number" min="0" max="200" id="np-${d.id}" value="${np[d.id]}"></div>`).join("")}
     <div class="row"><label for="typemode">Type your answers<br><span class="hint">Kanji and word cards ask for the meaning and the reading, check them and grade for you. Turn off to flip and grade yourself, like Anki.</span></label><input type="checkbox" id="typemode" ${state.settings.typeMode ? "checked" : ""}></div>
+    <div class="row"><label for="autograde">Grade automatically<br><span class="hint">Like WaniKani: right answers count as Good and go straight to the next card, misses count as Again. Turn off to see the answer and pick Again, Hard, Good or Easy yourself. Recall cards always use the buttons.</span></label><input type="checkbox" id="autograde" ${state.settings.autoGrade ? "checked" : ""}></div>
     <div class="row"><label for="autospeak">Speak the reading when the answer is shown</label><input type="checkbox" id="autospeak" ${state.settings.autoSpeak ? "checked" : ""}></div>
     <h2>Scheduling</h2>
     <p class="hint">Anki defaults: learning steps 1m and 10m, graduating interval 1 day, easy interval 4 days, starting ease 250%, relearning step 10m, new day starts at 4 a.m.</p>
@@ -1320,6 +1341,7 @@ function renderSettings() {
     state.settings.newPerDay[d.id] = v; store.settings();
   });
   document.getElementById("typemode").onchange = e => { state.settings.typeMode = e.target.checked; store.settings(); };
+  document.getElementById("autograde").onchange = e => { state.settings.autoGrade = e.target.checked; store.settings(); };
   document.getElementById("autospeak").onchange = e => { state.settings.autoSpeak = e.target.checked; store.settings(); };
   renderBackupPanel(document.getElementById("backup-panel"));
   renderWaniKaniPanel(document.getElementById("wk-panel"));
