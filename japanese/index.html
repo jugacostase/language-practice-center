@@ -270,26 +270,54 @@ const KANJI_RAW = `
 `;
 
 const KANJI = [], KMAP = {}, WORDS = [], WMAP = {};
-KANJI_RAW.trim().split("\n").forEach((line, i) => {
-  const [k, meaning, on, kun, ex] = line.split("|");
-  const examples = (ex || "").split(/;(?! )/).filter(Boolean).map(s => {
-    const [w, r, m] = s.split(":"); return { w, r, m };
+// Built-in list first, then content stored in the database's `items` table (e.g. imported
+// from WaniKani), in its own order. An imported item the app already has only adds
+// extra accepted answers. Rebuilt whenever the database is (re)loaded.
+function buildContent(rows = []) {
+  KANJI.length = 0; WORDS.length = 0;
+  for (const k in KMAP) delete KMAP[k];
+  for (const k in WMAP) delete WMAP[k];
+  KANJI_RAW.trim().split("\n").forEach((line, i) => {
+    const [k, meaning, on, kun, ex] = line.split("|");
+    // Example separator is ";" not followed by a space ("; " separates senses inside a meaning).
+    const examples = (ex || "").split(/;(?! )/).filter(Boolean).map(s => {
+      const [w, r, m] = s.split(":"); return { w, r, m };
+    });
+    const item = { k, meaning, on, kun, examples, idx: i, src: "core" };
+    KANJI.push(item); KMAP[k] = item;
   });
-  const item = { k, meaning, on, kun, examples, idx: i };
-  KANJI.push(item); KMAP[k] = item;
-});
-// Example separator is ";" not followed by a space ("; " separates senses inside a meaning).
-// Words: deduplicated across kanji. A word unlocks once every kanji in it that
-// this app teaches has been introduced (seen at least once).
-KANJI.forEach(kj => kj.examples.forEach(e => {
-  if (WMAP[e.w]) return;
-  const ks = [...e.w].filter(c => KMAP[c]);
-  if (!ks.length) return;
-  const order = Math.max(...ks.map(c => KMAP[c].idx));
-  const word = { w: e.w, r: e.r, m: e.m, ks, order, n: WORDS.length };
-  WORDS.push(word); WMAP[e.w] = word;
-}));
-WORDS.sort((a, b) => a.order - b.order || a.n - b.n);
+  const extra = rows.map(r => { let d = {}; try { d = JSON.parse(r.data_json); } catch (e) {} return { ...r, d }; })
+    .sort((a, b) => a.sort - b.sort);
+  const addAccept = (it, d) => {
+    if (d.acceptM && d.acceptM.length) it.acceptM = [...new Set([...(it.acceptM || []), ...d.acceptM])];
+    if (d.acceptR && d.acceptR.length) it.acceptR = [...new Set([...(it.acceptR || []), ...d.acceptR])];
+  };
+  for (const r of extra) if (r.kind === "kanji") {
+    if (KMAP[r.item]) { addAccept(KMAP[r.item], r.d); continue; }
+    const item = { k: r.item, meaning: r.d.meaning || "", on: r.d.on || "", kun: r.d.kun || "", examples: [], idx: KANJI.length, src: r.source, level: r.d.level };
+    addAccept(item, r.d); KANJI.push(item); KMAP[r.item] = item;
+  }
+  // Words: deduplicated across kanji. A word unlocks once every kanji in it that
+  // this app teaches has been introduced (seen at least once).
+  const addWord = (w, r, m, src) => {
+    const ks = [...new Set([...w].filter(c => KMAP[c]))];
+    if (!ks.length) return null;
+    const order = Math.max(...ks.map(c => KMAP[c].idx));
+    const word = { w, r, m, ks, order, n: WORDS.length, src };
+    WORDS.push(word); WMAP[w] = word; return word;
+  };
+  KANJI.forEach(kj => kj.examples.forEach(e => { if (!WMAP[e.w]) addWord(e.w, e.r, e.m, "core"); }));
+  for (const r of extra) if (r.kind === "word") {
+    if (WMAP[r.item]) { addAccept(WMAP[r.item], r.d); continue; }
+    const word = addWord(r.item, r.d.r || "", r.d.m || "", r.source);
+    if (word) { word.level = r.d.level; addAccept(word, r.d); }
+  }
+  WORDS.sort((a, b) => a.order - b.order || a.n - b.n);
+  // Imported kanji show up to three words that use them.
+  for (const k of KANJI) if (k.src !== "core")
+    k.examples = WORDS.filter(w => w.ks.includes(k.k)).slice(0, 3).map(w => ({ w: w.w, r: w.r, m: w.m }));
+}
+buildContent();
 
 const DECKS = [
   { id: "kanji", name: "Kanji", desc: "See the kanji, recall meaning and readings", def: 10 },
@@ -454,6 +482,7 @@ function stateToRows(st) {
   return { cards: Object.entries(st.cards).map(([id, c]) => cardToRow(id, c)), daily: [...days.values()] };
 }
 function applyRows(data) {
+  if (data.items) buildContent(data.items);
   const st = normalize({ settings: data.settings });
   for (const r of data.cards) st.cards[r.card_id] = rowToCard(r);
   for (const r of data.daily) if (r.reviews) st.history[r.study_day] = r.reviews;
@@ -522,6 +551,7 @@ async function boot() {
       migratedNote = `Moved ${Object.keys(old.cards).length} cards from the old browser storage into SQLite.`;
     } else applyRows(info);
     if (!info.meta.migrated_from) await dbc.call("meta", { key: "migrated_from", value: old ? "localStorage" : "none" });
+    if (info.meta.wanikani_import_ms) wkImportMs = +info.meta.wanikani_import_ms;
     lastBackupMs = +info.meta.last_backup_ms || 0; lastBackupHow = info.meta.last_backup_method || "";
     dbReady = true; syncEl.textContent = savedLabel();
   } catch (e) {
@@ -719,6 +749,121 @@ function renderBackupPanel(el) {
   });
 }
 
+/* ------------------------------ WaniKani import ------------------------------ */
+// Reads the WaniKani app's local-cache.db on this device (nothing is uploaded), adds its
+// kanji and vocabulary as study content, and turns each item's SRS stage into an SM-2 card.
+// The cache has the current stage and answer totals per item, not a log of past reviews,
+// so no rows are added to `reviews`.
+const WK_STAGES = ["Lesson", "Apprentice 1", "Apprentice 2", "Apprentice 3", "Apprentice 4", "Guru 1", "Guru 2", "Master", "Enlightened", "Burned"];
+const WK_STAGE_DAYS = [0, 1 / 6, 1 / 3, 1, 2, 7, 14, 30, 120];   // WaniKani's wait after reaching each stage
+const WK_IVL = [0, 1, 1, 1, 2, 7, 14, 30, 120, 365];             // SM-2 interval (days) given to each stage
+const hiraToKata = s => s.replace(/[ぁ-ゖ]/g, c => String.fromCharCode(c.charCodeAt(0) + 0x60));
+let wkData = null, wkSpread = 30, wkImportMs = 0;
+
+function wkContent(it) {
+  const shown = it.meanings.filter(m => m.type === 1 || m.type === 2).map(m => m.text);
+  const acceptM = [...it.meanings.filter(m => m.type === 3).map(m => m.text), ...it.synonyms];
+  if (it.kind === "kanji") {
+    const by = t => it.readings.filter(r => r.type === t).sort((a, b) => b.primary - a.primary).map(r => r.text.replace(/[^ぁ-ゖァ-ヺー]/g, "")).filter(Boolean);
+    return { meaning: shown.join("; "), on: by(1).map(hiraToKata).join("、"), kun: by(2).join("、"), acceptM, acceptR: [], level: it.level };
+  }
+  const rs = it.readings.slice().sort((a, b) => b.primary - a.primary).map(r => r.text);
+  return { r: rs[0] || "", m: shown.join("; "), acceptM, acceptR: rs.slice(1), level: it.level };
+}
+function wkEase(st) {
+  const tot = st ? st.mc + st.mi + st.rc + st.ri : 0;
+  if (!tot) return START_EASE;
+  const pct = (st.mc + st.rc) / tot;                 // 95%+ correct keeps 250%; 70% gives 200%
+  return Math.round(Math.min(START_EASE, Math.max(MIN_EASE, START_EASE - 2 * (0.95 - pct))) * 100) / 100;
+}
+// Build items + cards. Cards you have already studied in this app are left alone.
+// Reviews that are overdue (WaniKani wanted them before today) are spread over `spreadDays`
+// days, weakest first, so a long break doesn't land as one giant pile.
+function planWaniKani(wk, spreadDays) {
+  const now = Date.now(), td = today();
+  const items = [], cards = [], overdue = [];
+  const sum = { kanji: 0, word: 0, cards: 0, kept: 0, kana: 0, lessons: 0, overdue: 0, future: 0, coreK: 0, coreW: 0, stages: new Array(10).fill(0) };
+  const builtK = new Set(KANJI.filter(k => k.src === "core").map(k => k.k)), builtW = new Set(WORDS.filter(w => w.src === "core").map(w => w.w));
+  wk.items.forEach((it, i) => {
+    const data = wkContent(it);
+    if (it.kind === "word" && (!data.r || !/[一-鿿々]/.test(it.ch))) { sum.kana++; return; } // kana-only words: nothing to read
+    items.push({ kind: it.kind, item: it.ch, source: "wanikani", sort: 100000 + i, data_json: JSON.stringify(data) });
+    sum[it.kind]++;
+    if (it.kind === "kanji" ? builtK.has(it.ch) : builtW.has(it.ch)) sum[it.kind === "kanji" ? "coreK" : "coreW"]++;
+    const stage = it.stage || 0; sum.stages[stage]++;
+    if (stage < 1) { sum.lessons++; return; }          // not started on WaniKani: stays a new card here
+    const deck = it.kind === "kanji" ? "kanji" : "words", id = cardId(deck, it.ch);
+    const mine = state.cards[id];
+    if (mine && mine.t !== "new") { sum.kept++; return; }
+    const st = it.stats;
+    const card = { t: "review", s: 0, ivl: WK_IVL[stage], e: wkEase(st),
+      r: st ? Math.max(st.mc + st.mi, st.rc + st.ri) : 1, l: st ? st.mi + st.ri : 0 };
+    const last = stage === 9 ? it.burnedMs : it.availableMs ? it.availableMs - WK_STAGE_DAYS[stage] * DAY : null;
+    if (last) card.last = Math.round(last);
+    const due = stage === 9 ? (it.burnedMs || now) + WK_IVL[9] * DAY : it.availableMs || now;
+    const acc = st && (st.mc + st.mi + st.rc + st.ri) ? (st.mc + st.rc) / (st.mc + st.mi + st.rc + st.ri) : 1;
+    if (dayNum(due) <= td) overdue.push({ id, card, stage, acc });
+    else { card.due = due; sum.future++; cards.push(cardToRow(id, card)); }
+  });
+  overdue.sort((a, b) => a.stage - b.stage || a.acc - b.acc);
+  const days = Math.max(1, spreadDays);
+  overdue.forEach((o, i) => { o.card.due = dueAtDay(td + Math.floor(i * days / overdue.length)); cards.push(cardToRow(o.id, o.card)); });
+  sum.overdue = overdue.length; sum.cards = cards.length;
+  return { items, cards, sum };
+}
+function wkSummaryHtml(wk, plan) {
+  const s = plan.sum, perDay = s.overdue ? Math.ceil(s.overdue / Math.max(1, wkSpread)) : 0;
+  const stageRows = s.stages.map((n, i) => n ? `<span class="bk">${WK_STAGES[i]} <b>${n}</b></span>` : "").join(" ");
+  return `<p class="hint">Found <b>${esc(wk.user.username || "a WaniKani account")}</b>${wk.user.level ? `, level ${wk.user.level}` : ""}:
+      <b>${s.kanji}</b> kanji and <b>${s.word}</b> vocabulary (${s.coreK} of the kanji and ${s.coreW} of the words are already in the built-in list).
+      ${wk.radicals || s.kana ? `Skipped: ${[wk.radicals ? `${wk.radicals} radicals (no radical deck here)` : "", s.kana ? `${s.kana} kana-only words` : ""].filter(Boolean).join(" and ")}.` : ""}</p>
+    <div class="breakdown" style="justify-content:flex-start">${stageRows}</div>
+    <p class="hint"><b>${s.cards}</b> cards get WaniKani's progress${s.kept ? `, <b>${s.kept}</b> you already study here keep their progress here` : ""}${s.lessons ? `, and <b>${s.lessons}</b> items you hadn't started become new cards` : ""}.
+      Apprentice becomes a 1–2 day interval, Guru 7–14 days, Master 30, Enlightened 120, Burned 365. Ease comes from your WaniKani accuracy.</p>
+    ${s.overdue ? `<div class="row"><label for="wk-spread"><b>${s.overdue}</b> reviews are overdue${s.future ? ` (${s.future} more come due later on WaniKani's schedule)` : ""}. Spread them over<br>
+      <span class="hint">About ${perDay} a day, weakest items first. Anything you miss drops back to relearning.</span></label>
+      <select id="wk-spread">${[[1, "Today"], [7, "1 week"], [14, "2 weeks"], [30, "30 days"], [60, "60 days"]].map(([v, t]) => `<option value="${v}" ${wkSpread === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>` : ""}
+    <div class="btnrow"><button class="btn primary" id="wk-go">Import ${s.kanji + s.word} items</button><button class="btn" id="wk-cancel">Cancel</button></div>
+    <p class="hint">A snapshot is taken first, so you can undo this under “Snapshots on this device”.</p>`;
+}
+function renderWaniKaniPanel(el) {
+  const last = wkImportMs;
+  el.innerHTML = `<p class="hint">Pick the <code>local-cache.db</code> file from the WaniKani app. It's read on this device; nothing is uploaded.
+      Kanji and vocabulary you studied there are added here with their SRS stage turned into Anki-style intervals.${last ? ` Last import: ${esc(new Date(last).toLocaleString())}.` : ""}</p>
+    <div class="btnrow"><button class="btn" id="wk-pick" ${dbReady ? "" : "disabled"}>Choose local-cache.db…</button><input type="file" id="wk-file" hidden></div>
+    <div id="wk-out"></div><div class="msg" id="wk-msg"></div>`;
+  const out = document.getElementById("wk-out"), msg = document.getElementById("wk-msg"), fileIn = document.getElementById("wk-file");
+  document.getElementById("wk-pick").onclick = () => fileIn.click();
+  const show = () => {
+    const plan = planWaniKani(wkData, wkSpread);
+    out.innerHTML = wkSummaryHtml(wkData, plan);
+    const sel = document.getElementById("wk-spread"); if (sel) sel.onchange = e => { wkSpread = +e.target.value; show(); };
+    document.getElementById("wk-cancel").onclick = () => { wkData = null; out.innerHTML = ""; };
+    document.getElementById("wk-go").onclick = async e => {
+      e.target.disabled = true; msg.textContent = "Importing…";
+      try {
+        const fresh = planWaniKani(wkData, wkSpread);
+        const data = await dbc.call("importItems", { items: fresh.items, cards: fresh.cards,
+          meta: { wanikani_import_ms: Date.now(), wanikani_user: wkData.user.username || "" } });
+        applyRows(data); wkImportMs = +data.meta.wanikani_import_ms; changeSeq++; persistLocal(); scheduleAutoBackup();
+        wkData = null; out.innerHTML = "";
+        msg.textContent = `Imported ${fresh.items.length} items and ${fresh.cards.length} cards.`;
+        setTimeout(() => go("home"), 1500);
+      } catch (err) { msg.textContent = "Import failed: " + (err.message || err); e.target.disabled = false; }
+    };
+  };
+  fileIn.onchange = async () => {
+    const f = fileIn.files[0]; fileIn.value = ""; if (!f) return;
+    msg.textContent = "Reading…"; out.innerHTML = "";
+    try {
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      wkData = await dbc.call("readWaniKani", { bytes }, [bytes.buffer]);
+      if (!wkData.items.length) throw new Error("No kanji or vocabulary with progress found in that file.");
+      msg.textContent = ""; show();
+    } catch (err) { wkData = null; msg.textContent = String(err.message || err); }
+  };
+}
+
 /* ============================== SPEECH ============================== */
 function speak(text) {
   try {
@@ -832,6 +977,7 @@ function kanjiReadings(k) {
     const stem = r.replace(/\(.*?\)/g, "");      // ひと(つ) → ひと (only when the stem is 2+ kana)
     if (stem.length >= 2 || !r.includes("(")) out.add(stem);
   });
+  (k.acceptR || []).forEach(r => out.add(kataToHira(r)));
   out.delete("");
   return [...out];
 }
@@ -869,13 +1015,15 @@ function questionsFor(cur) {
   if (!state.settings.typeMode || cur.deck === "recall") return [];
   if (cur.deck === "kanji") {
     const k = KMAP[cur.key];
-    return [{ kind: "meaning", accept: meaningAnswers(k.meaning), show: k.meaning },
+    return [{ kind: "meaning", accept: withExtra(meaningAnswers(k.meaning), k.acceptM), show: k.meaning },
             { kind: "reading", accept: kanjiReadings(k), show: [k.on, k.kun].filter(Boolean).join(" / "), any: true }];
   }
   const w = WMAP[cur.key];
-  return [{ kind: "reading", accept: [kataToHira(w.r)], show: w.r },
-          { kind: "meaning", accept: meaningAnswers(w.m), show: w.m }];
+  return [{ kind: "reading", accept: [kataToHira(w.r), ...(w.acceptR || []).map(kataToHira)], show: [w.r, ...(w.acceptR || [])].join("、") },
+          { kind: "meaning", accept: withExtra(meaningAnswers(w.m), w.acceptM), show: w.m }];
 }
+// Extra accepted meanings (WaniKani alternatives and your own synonyms).
+const withExtra = (list, extra) => [...new Set([...list, ...(extra || []).flatMap(meaningAnswers)])];
 
 /* ============================== STUDY ============================== */
 function startSession(decks) { session = { decks, cur: null, shown: false, undo: [], done: 0, right: 0, typed: 0 }; lastShown = null; view = "study"; nextCard(); }
@@ -1064,11 +1212,14 @@ document.addEventListener("keydown", e => {
 
 function tileClass(c) { if (c.t === "new") return ""; if (c.t === "review") return c.ivl >= 21 ? "mature" : "young"; return "learn"; }
 function renderBrowse() {
-  const tiles = KANJI.map(k => `<button class="tile ${tileClass(getCard(cardId("kanji", k.k)))}" data-k="${k.k}" title="${esc(k.meaning)}">${k.k}</button>`).join("");
+  const tiles = list => list.map(k => `<button class="tile ${tileClass(getCard(cardId("kanji", k.k)))}" data-k="${k.k}" title="${esc(k.meaning)}">${k.k}</button>`).join("");
+  const core = KANJI.filter(k => k.src === "core"), wk = KANJI.filter(k => k.src === "wanikani");
   main.innerHTML = `<div class="panel">
     <b>${KANJI.length} kanji · ${WORDS.length} words</b>
     <div class="legend"><span><i style="background:var(--tile-new)"></i>Not started</span><span><i style="background:var(--tile-learn)"></i>Learning</span><span><i style="background:var(--tile-young)"></i>Young</span><span><i style="background:var(--tile-mature)"></i>Mature (21d+)</span></div>
-    <div class="grid">${tiles}</div></div>`;
+    ${wk.length ? `<h2 style="margin-top:4px">JLPT N5 (built in)</h2>` : ""}
+    <div class="grid">${tiles(core)}</div>
+    ${wk.length ? `<h2>From WaniKani</h2><div class="grid">${tiles(wk)}</div>` : ""}</div>`;
   main.querySelectorAll("[data-k]").forEach(b => b.onclick = () => openKanji(b.dataset.k));
 }
 function cardLine(label, c) {
@@ -1099,6 +1250,8 @@ function renderSettings() {
     <div class="row"><label for="autospeak">Speak the reading when the answer is shown</label><input type="checkbox" id="autospeak" ${state.settings.autoSpeak ? "checked" : ""}></div>
     <h2>Scheduling</h2>
     <p class="hint">Anki defaults: learning steps 1m and 10m, graduating interval 1 day, easy interval 4 days, starting ease 250%, relearning step 10m, new day starts at 4 a.m.</p>
+    <h2>Import from WaniKani</h2>
+    <div id="wk-panel"></div>
     <h2>Backup</h2>
     <div id="backup-panel"></div>
     <h2>Reset</h2>
@@ -1112,6 +1265,7 @@ function renderSettings() {
   document.getElementById("typemode").onchange = e => { state.settings.typeMode = e.target.checked; store.settings(); };
   document.getElementById("autospeak").onchange = e => { state.settings.autoSpeak = e.target.checked; store.settings(); };
   renderBackupPanel(document.getElementById("backup-panel"));
+  renderWaniKaniPanel(document.getElementById("wk-panel"));
   let armed = false;
   document.getElementById("reset").onclick = e => {
     if (!armed) { armed = true; e.target.textContent = "Click again to erase everything"; document.getElementById("resetmsg").textContent = "This can't be undone. Save a backup first if you might want it."; return; }

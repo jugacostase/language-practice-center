@@ -36,6 +36,32 @@ after that it runs offline. Only one tab/window can own the database at a time.
   ~20 s after you study, with no prompts (the browser asks again for permission after a restart).
 * Restore: Settings → Restore from a file… accepts a `.sqlite3` backup or the old JSON export.
 
+## Import from WaniKani
+
+Settings → Import from WaniKani reads the WaniKani app's `local-cache.db` on the device (the
+file never leaves it). Kanji and vocabulary with an assignment are written to the `items`
+table and show up next to the built-in N5 list; radicals and kana-only words are skipped.
+For items the app already has, WaniKani's extra meanings, alternate readings and your
+synonyms become accepted answers.
+
+Each item's SRS stage becomes an SM-2 review card:
+
+| WaniKani stage | interval | due |
+|---|---|---|
+| Lesson (not started) | stays a new card | |
+| Apprentice 1–3 | 1 d | WaniKani's next review time |
+| Apprentice 4 | 2 d | 〃 |
+| Guru 1 / Guru 2 | 7 d / 14 d | 〃 |
+| Master | 30 d | 〃 |
+| Enlightened | 120 d | 〃 |
+| Burned | 365 d | burned date + 365 d |
+
+Ease is 250% at 95%+ WaniKani accuracy, minus 2 points per point below 95 (floor 130%);
+lapses = wrong answers, reps = answers. Reviews that would already be overdue are spread over a
+chosen number of days (default 30), lowest stage and accuracy first. Cards already studied in
+this app keep their own progress, so re-importing is safe. The cache only has per-item totals,
+not a review log, so nothing is added to `reviews`. A pre-import snapshot is taken first.
+
 ## Schema
 
 ```
@@ -44,6 +70,7 @@ reviews(review_id PK, ts_ms, study_day, card_id, deck, item, grade, typed, typed
         answers_json, answer_ms, state_before, interval_before, ease_before, due_before_ms,
         state_after, interval_after, ease_after, due_after_ms)
 daily(study_day PK, date, reviews, new_kanji, new_words, new_recall)
+items(kind, item, source, sort, data_json)  -- extra content, PK (kind, item)
 settings(key PK, value JSON)      meta(key PK, value)
 view reviews_readable             -- local datetimes, seconds per answer
 ```
