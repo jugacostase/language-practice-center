@@ -1612,7 +1612,21 @@ function renderSettings() {
 boot();
 setInterval(() => { if (view === "home") renderHome(); }, 60000);
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
-  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  // Updates: the page runs from the offline cache, so a new version only arrives through a
+  // new service worker. When one takes over, reload to show it right away (or, mid-study,
+  // as soon as you're back on the deck list). Also check for updates whenever the app is
+  // brought back to the front, since an installed iPhone app is rarely relaunched.
+  const hadController = !!navigator.serviceWorker.controller;
+  let updatePending = false;
+  const applyUpdate = () => { if (updatePending && view !== "study") location.reload(); };
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController) return; // first install, nothing new to show
+    updatePending = true; applyUpdate();
+  });
+  const origGo = go; go = v => { origGo(v); applyUpdate(); };
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").then(reg => {
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); });
+  }).catch(() => {}));
 }
 </script>
 </body>
