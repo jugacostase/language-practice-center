@@ -14,10 +14,13 @@
 <title>Kanji SRS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- The kanji font is picked in Settings; this link is swapped by applyFont(). -->
+<link id="jpfont" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=swap" rel="stylesheet">
 <style>
 /* Palette: #e63946 red · #f1faee mint white · #a8dadc powder blue · #457b9d steel blue · #1d3557 navy */
 :root{
+  --jp:"Klee One","Noto Sans JP",sans-serif; --jpw:600;
   --bg:#f1faee; --panel:#ffffff; --ink:#1d3557; --muted:#56698a; --line:#cfe3e2;
   --accent:#e63946; --primary:#1d3557; --on-primary:#f1faee;
   --new:#457b9d; --learn:#e63946; --due:#1d3557;
@@ -43,7 +46,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .wrap{max-width:760px;margin:0 auto;padding:16px 16px 48px}
 header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
 header h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.01em}
-header h1 span{color:var(--accent);font-family:"Noto Serif JP",serif}
+header h1 span{color:var(--accent);font-family:var(--jp)}
 nav{margin-left:auto;display:flex;gap:4px}
 nav button{background:none;border:1px solid transparent;border-radius:8px;padding:6px 10px;color:var(--muted)}
 nav button.on{border-color:var(--line);background:var(--panel);color:var(--ink)}
@@ -69,8 +72,8 @@ nav button.on{border-color:var(--line);background:var(--panel);color:var(--ink)}
 .card{min-height:360px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 20px;position:relative}
 .tag{position:absolute;top:12px;left:14px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .speak{position:absolute;top:8px;right:10px;border:none;background:none;font-size:18px;color:var(--muted);padding:6px}
-.kanji-big{font-family:"Noto Serif JP",serif;font-size:128px;line-height:1.1;font-weight:500}
-.word-big{font-family:"Noto Serif JP",serif;font-size:64px;line-height:1.2;font-weight:500}
+.kanji-big{font-family:var(--jp);font-size:128px;line-height:1.1;font-weight:var(--jpw)}
+.word-big{font-family:var(--jp);font-size:64px;line-height:1.2;font-weight:var(--jpw)}
 .prompt{font-size:30px;font-weight:600}
 .sub{color:var(--muted);margin-top:8px}
 hr.div{width:100%;border:none;border-top:1px dashed var(--line);margin:20px 0}
@@ -82,12 +85,12 @@ hr.div{width:100%;border:none;border-top:1px dashed var(--line);margin:20px 0}
 .examples{margin-top:16px;width:100%;max-width:440px;text-align:left}
 .ex{display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line);font-size:16px}
 .ex:last-child{border-bottom:none}
-.ex .w{font-family:"Noto Serif JP",serif;font-size:20px;min-width:96px}
+.ex .w{font-family:var(--jp);font-size:20px;min-width:96px}
 .ex .r{color:var(--muted);min-width:110px}
 .ex .lock{font-size:11px;color:var(--muted);margin-left:auto}
 .breakdown{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
 .bk{border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px}
-.bk span{font-family:"Noto Serif JP",serif;font-size:22px;display:block}
+.bk span{font-family:var(--jp);font-size:22px;display:block}
 .answer{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
 .answer button{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 4px;font-weight:600}
 .answer button small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:2px}
@@ -136,7 +139,7 @@ hr.div{width:100%;border:none;border-top:1px dashed var(--line);margin:20px 0}
 .legend{display:flex;gap:12px;font-size:12px;color:var(--muted);margin:8px 0 12px;flex-wrap:wrap}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px}
-.tile{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:"Noto Serif JP",serif;font-size:28px;background:var(--tile-new)}
+.tile{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--jp);font-size:28px;background:var(--tile-new)}
 .tile.learn{background:var(--tile-learn)} .tile.young{background:var(--tile-young)} .tile.mature{background:var(--tile-mature)}
 .modal-bg{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
 .modal{max-width:520px;width:100%;max-height:90vh;overflow:auto;position:relative;text-align:center}
@@ -159,6 +162,20 @@ h2{font-size:15px;margin:20px 0 8px}
 .snaps .snap span{flex:1}
 code{font-size:12px}
 select{font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.clist .desc{font-variant-numeric:tabular-nums}
+.row input[type=text],.row input:not([type]){font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea.cl-text{font-family:"Noto Sans JP",system-ui,sans-serif;font-size:15px;min-height:160px;line-height:1.6}
+.preview{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+.ctable{width:100%;border-collapse:collapse;font-size:14px}
+.ctable th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:4px 6px}
+.ctable td{padding:5px 6px;border-top:1px solid var(--line);vertical-align:top}
+.ctable .jw{font-family:var(--jp);font-size:19px;white-space:nowrap}
+.warnc{color:var(--again);font-size:13px}
+.fontpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:8px}
+.fontpick button{border:2px solid var(--line);background:var(--panel);border-radius:12px;padding:8px 6px;text-align:center}
+.fontpick button.on{border-color:var(--primary)}
+.fontpick .s{display:block;font-size:34px;line-height:1.3}
+.fontpick small{color:var(--muted);font-size:12px}
 @media (max-width:560px){
   .stats{grid-template-columns:repeat(2,1fr)}
   .kanji-big{font-size:104px}
@@ -176,6 +193,7 @@ select{font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);b
     <span class="sync" id="sync">Saved on this device</span>
     <nav>
       <button data-view="home" class="on">Decks</button>
+      <button data-view="class">Class</button>
       <button data-view="browse">Browse</button>
       <button data-view="settings">Settings</button>
     </nav>
@@ -294,7 +312,7 @@ const KANJI_RAW = `
 何|what|カ|なに、なん|何:なに:what;何人:なんにん:how many people;何時:なんじ:what time
 `;
 
-const KANJI = [], KMAP = {}, WORDS = [], WMAP = {};
+const KANJI = [], KMAP = {}, WORDS = [], WMAP = {}, CLASS = [], CMAP = {};
 // Built-in list first, then content stored in the database's `items` table (e.g. imported
 // from WaniKani), in its own order. An imported item the app already has only adds
 // extra accepted answers. Rebuilt whenever the database is (re)loaded.
@@ -302,6 +320,7 @@ function buildContent(rows = []) {
   KANJI.length = 0; WORDS.length = 0;
   for (const k in KMAP) delete KMAP[k];
   for (const k in WMAP) delete WMAP[k];
+  CLASS.length = 0; for (const k in CMAP) delete CMAP[k];
   KANJI_RAW.trim().split("\n").forEach((line, i) => {
     const [k, meaning, on, kun, ex] = line.split("|");
     // Example separator is ";" not followed by a space ("; " separates senses inside a meaning).
@@ -338,24 +357,37 @@ function buildContent(rows = []) {
     if (word) { word.level = r.d.level; addAccept(word, r.d); }
   }
   WORDS.sort((a, b) => a.order - b.order || a.n - b.n);
+  // Class words: their own deck, in the order they were pasted. Not tied to kanji unlocks.
+  for (const r of extra) if (r.kind === "class" && !CMAP[r.item]) {
+    const w = { w: r.item, r: r.d.r || "", m: r.d.m || "", list: r.d.list || "Class words", ks: [...new Set([...r.item].filter(c => KMAP[c]))], sort: r.sort };
+    CLASS.push(w); CMAP[w.w] = w;
+  }
   // Imported kanji show up to three words that use them.
   for (const k of KANJI) if (k.src !== "core")
     k.examples = WORDS.filter(w => w.ks.includes(k.k)).slice(0, 3).map(w => ({ w: w.w, r: w.r, m: w.m }));
 }
 buildContent();
 
+// Each deck has its own one-letter prefix for card ids. Meaning and reading of a kanji are
+// separate cards (k: and y:) with their own schedules, like WaniKani's separate questions.
 const DECKS = [
-  { id: "kanji", name: "Kanji", desc: "See the kanji, recall meaning and readings", def: 10 },
-  { id: "words", name: "Words", desc: "Vocabulary that unlocks as you learn its kanji", def: 15 },
-  { id: "recall", name: "Kanji recall", desc: "See the meaning, picture or write the kanji. Unlocks once a kanji is past its first few days", def: 5 },
+  { id: "kanji", letter: "k", name: "Kanji meaning", desc: "See the kanji, give its meaning", def: 10 },
+  { id: "readings", letter: "y", name: "Kanji reading", desc: "See the kanji, give a reading. Unlocks once you've met the kanji", def: 10 },
+  { id: "words", letter: "w", name: "Words", desc: "Vocabulary that unlocks as you learn its kanji", def: 15 },
+  { id: "recall", letter: "r", name: "Kanji recall", desc: "See the meaning, picture or write the kanji. Unlocks once a kanji is past its first few days", def: 5 },
+  { id: "class", letter: "c", name: "Class words", desc: "The vocabulary lists you paste in from your Japanese class", def: 20 },
 ];
-const cardId = (deck, key) => deck[0] + ":" + key; // k:日, w:毎日, r:日
+const DECK_LETTER = Object.fromEntries(DECKS.map(d => [d.id, d.letter]));
+const DECK_BY_LETTER = Object.fromEntries(DECKS.map(d => [d.letter, d.id]));
+const cardId = (deck, key) => DECK_LETTER[deck] + ":" + key; // k:日 meaning, y:日 reading, w:毎日, r:日, c:食べる
+// Cards about the same kanji (or the same word) are "siblings" and are never shown back to back.
+const sibKey = (deck, key) => (deck === "words" || deck === "class" ? "W:" : "K:") + key;
 
 /* ============================== STATE ============================== */
 const LS_KEY = "kanji-srs-v1";
 function freshState() {
   return { v: 1, updatedAt: 0, cards: {}, daily: { day: -1, newDone: {}, reviews: 0 }, history: {},
-    settings: { newPerDay: Object.fromEntries(DECKS.map(d => [d.id, d.def])), autoSpeak: false, typeMode: true, autoGrade: true, backupEveryDays: 3 } };
+    settings: { newPerDay: Object.fromEntries(DECKS.map(d => [d.id, d.def])), autoSpeak: false, typeMode: true, autoGrade: true, backupEveryDays: 3, jpFont: "klee" } };
 }
 function normalize(s) {
   const f = freshState();
@@ -429,8 +461,11 @@ function rollDay() {
   if (state.daily.day !== td) state.daily = { day: td, newDone: {}, reviews: 0 };
 }
 function introduced(k) { return getCard(cardId("kanji", k)).t !== "new"; }
+let classScope = null; // a class list name to study only that list, or null for every class word
 function deckCards(deck) { // ordered list of {id, key} available (unlocked) in this deck
   if (deck === "kanji") return KANJI.map(k => ({ id: cardId("kanji", k.k), key: k.k }));
+  if (deck === "readings") return KANJI.filter(k => introduced(k.k)).map(k => ({ id: cardId("readings", k.k), key: k.k }));
+  if (deck === "class") return CLASS.filter(w => !classScope || w.list === classScope).map(w => ({ id: cardId("class", w.w), key: w.w }));
   if (deck === "words") return WORDS.filter(w => w.ks.every(introduced)).map(w => ({ id: cardId("words", w.w), key: w.w }));
   if (deck === "recall") return KANJI.filter(k => { const c = getCard(cardId("kanji", k.k)); return (c.t === "review" && c.ivl >= 3) || c.t === "relearn"; })
     .map(k => ({ id: cardId("recall", k.k), key: k.k }));
@@ -449,7 +484,7 @@ function deckCounts(deck) {
   }
   return { nw: Math.min(nw, left), lr, due };
 }
-let lastShown = null;
+let lastShown = null, recentSibs = [];
 function pickNext(decks) {
   rollDay(); const now = Date.now(), td = today();
   const learn = [], rev = [], news = [], ahead = []; let nextLearn = Infinity;
@@ -464,16 +499,21 @@ function pickNext(decks) {
       } else if (dayNum(c.due) <= td) rev.push(item);
     }
   }
-  const avoid = arr => arr.length > 1 && arr[0].id === lastShown ? arr[1] : arr[0];
+  // Skip the card just shown and its siblings (the other cards of the same kanji or word)
+  // whenever something else is available, so meaning and reading never come back to back.
+  const fresh = it => it.id !== lastShown && !recentSibs.includes(sibKey(it.deck, it.key));
+  const avoid = arr => arr.find(fresh) || arr.find(it => it.id !== lastShown) || arr[0];
   learn.sort((a, b) => a.c.due - b.c.due);
-  if (learn.length && !(learn.length === 1 && learn[0].id === lastShown && (rev.length || news.length))) return avoid(learn);
   rev.sort((a, b) => a.c.due - b.c.due);
   // Interleave new cards: kanji first, so their words unlock right after.
   news.sort((a, b) => DECKS.findIndex(d => d.id === a.deck) - DECKS.findIndex(d => d.id === b.deck));
-  if (rev.length && news.length) return Math.random() < rev.length / (rev.length + news.length) ? avoid(rev) : avoid(news);
-  if (rev.length) return avoid(rev);
-  if (news.length) return avoid(news);
-  if (learn.length) return learn[0];
+  const mix = (r, n) => r.length && n.length ? (Math.random() < r.length / (r.length + n.length) ? r[0] : n[0]) : r[0] || n[0];
+  const learnOk = learn.filter(fresh);
+  if (learnOk.length) return learnOk[0];
+  const pick = mix(rev.filter(fresh), news.filter(fresh));
+  if (pick) return pick;
+  if (learn.length) return avoid(learn);
+  if (rev.length || news.length) return mix(rev, news);
   ahead.sort((a, b) => a.c.due - b.c.due);
   if (ahead.length) return avoid(ahead);
   return { none: true, nextLearn };
@@ -484,7 +524,6 @@ function pickNext(decks) {
 // every change is written through to SQLite right away. If SQLite can't start (very old
 // browser, or the app is already open in another tab), it falls back to localStorage.
 const syncEl = document.getElementById("sync");
-const DECK_BY_LETTER = Object.fromEntries(DECKS.map(d => [d.id[0], d.id]));
 function splitId(id) { const [l, ...rest] = id.split(":"); return { deck: DECK_BY_LETTER[l], item: rest.join(":") }; }
 function cardToRow(id, c) {
   const { deck, item } = splitId(id);
@@ -497,12 +536,14 @@ function rowToCard(r) {
   return c;
 }
 const dayDate = d => new Date(d * DAY).toISOString().slice(0, 10); // local calendar date of study day d
+// Each deck's new-card count for the day lives in a daily column new_<deck id>.
 function dailyRow(d = state.daily) {
-  return { study_day: d.day, date: dayDate(d.day), reviews: d.reviews || 0,
-    new_kanji: d.newDone.kanji || 0, new_words: d.newDone.words || 0, new_recall: d.newDone.recall || 0 };
+  const row = { study_day: d.day, date: dayDate(d.day), reviews: d.reviews || 0 };
+  for (const dk of DECKS) row["new_" + dk.id] = d.newDone[dk.id] || 0;
+  return row;
 }
 function stateToRows(st) {
-  const days = new Map(Object.entries(st.history || {}).map(([d, n]) => [+d, { study_day: +d, date: dayDate(+d), reviews: n, new_kanji: 0, new_words: 0, new_recall: 0 }]));
+  const days = new Map(Object.entries(st.history || {}).map(([d, n]) => [+d, dailyRow({ day: +d, reviews: n, newDone: {} })]));
   if (st.daily && st.daily.day >= 0) days.set(st.daily.day, dailyRow(st.daily));
   return { cards: Object.entries(st.cards).map(([id, c]) => cardToRow(id, c)), daily: [...days.values()] };
 }
@@ -512,9 +553,28 @@ function applyRows(data) {
   for (const r of data.cards) st.cards[r.card_id] = rowToCard(r);
   for (const r of data.daily) if (r.reviews) st.history[r.study_day] = r.reviews;
   const t = data.daily.find(r => r.study_day === today());
-  if (t) st.daily = { day: t.study_day, reviews: t.reviews, newDone: { kanji: t.new_kanji, words: t.new_words, recall: t.new_recall } };
+  if (t) st.daily = { day: t.study_day, reviews: t.reviews, newDone: Object.fromEntries(DECKS.map(dk => [dk.id, t["new_" + dk.id] || 0])) };
+  st.splitDone = !!(data.meta && data.meta.split_readings_ms);
   state = st;
   if (data.reviewCount != null) reviewCount = data.reviewCount;
+}
+// One-time split of the old combined kanji card (meaning + reading on one card) into a
+// meaning card (k:, keeps its id and history) and a reading card (y:). The reading card
+// starts with a copy of the old card's schedule, so no progress is lost. Runs after any
+// load that may hold pre-split progress: first start, database import, snapshot restore.
+async function splitKanjiCards() {
+  if (state.splitDone) return 0;
+  const add = [];
+  for (const [id, c] of Object.entries(state.cards)) {
+    if (!id.startsWith("k:") || c.t === "new") continue;
+    const y = "y:" + id.slice(2);
+    if (!state.cards[y]) { state.cards[y] = { ...c }; add.push(cardToRow(y, state.cards[y])); }
+  }
+  state.splitDone = true;
+  if (dbReady) await dbc.call("splitCards", { cards: add });
+  else persistLocal();
+  if (add.length) { changeSeq++; migratedNote = (migratedNote ? migratedNote + " " : "") + `Meaning and reading are now separate cards. ${add.length} kanji reading cards were created with the progress of their old kanji card.`; }
+  return add.length;
 }
 
 const dbc = (() => {
@@ -579,11 +639,14 @@ async function boot() {
     if (info.meta.wanikani_import_ms) wkImportMs = +info.meta.wanikani_import_ms;
     lastBackupMs = +info.meta.last_backup_ms || 0; lastBackupHow = info.meta.last_backup_method || "";
     dbReady = true; syncEl.textContent = savedLabel();
+    await splitKanjiCards();
   } catch (e) {
     dbReady = false;
     dbError = String(e && e.message || e);
     if (/lock|access handle|NoModificationAllowed|InvalidState/i.test(dbError)) dbError = "The database is locked, probably because the app is open in another tab or window. Close the others and reload. " + dbError;
     state = readLocalStorageState() || freshState();
+    buildContent(state.extraItems || []);
+    await splitKanjiCards();
     syncEl.textContent = "Database unavailable";
     console.error(e);
   }
@@ -591,6 +654,7 @@ async function boot() {
     try { persisted = (await navigator.storage.persisted()) || (await navigator.storage.persist()); } catch (e) {}
   }
   await loadBackupHandle();
+  applyFont();
   render();
   if (dbReady) prepareExport();
 }
@@ -707,7 +771,8 @@ function wireBackupBanner() {
 }
 
 function renderBackupPanel(el) {
-  const fmtDay = id => /^\d+$/.test(id) ? dayDate(+id) : id.startsWith("pre-import-") ? "before import " + new Date(+id.slice(11)).toLocaleString() : id;
+  const fmtDay = id => /^\d+$/.test(id) ? dayDate(+id) : id.startsWith("pre-import-") ? "before import " + new Date(+id.slice(11)).toLocaleString()
+    : id.startsWith("pre-split-") ? "before meaning/reading split " + new Date(+id.slice(10)).toLocaleString() : id;
   el.innerHTML = `
     <p class="hint">${dbReady
       ? `Your progress lives in a SQLite database (SQLite ${esc(sqliteVersion)}) inside this app's private storage on this device. ${reviewCount} reviews logged.
@@ -742,11 +807,11 @@ function renderBackupPanel(el) {
     try {
       if (bytes[0] === 0x7b) { // "{" → JSON progress from the old version
         const s = JSON.parse(new TextDecoder().decode(bytes)); if (!s || !s.cards) throw new Error("That JSON isn't a progress backup.");
-        state = normalize(s); store.replaceState(false);
+        state = normalize(s); store.replaceState(false); await splitKanjiCards();
       } else {
         if (!dbReady) throw new Error("The database isn't available, so a .sqlite3 file can't be restored.");
         applyRows(await dbc.call("importDb", { bytes }, [bytes.buffer]));
-        changeSeq++; persistLocal();
+        await splitKanjiCards(); changeSeq++; persistLocal();
       }
       say(`Restored from ${f.name}.`); setTimeout(() => go("home"), 1200);
     } catch (e) { say(String(e.message || e)); }
@@ -754,9 +819,9 @@ function renderBackupPanel(el) {
   const pick = document.getElementById("bk-pick"), stop = document.getElementById("bk-stop");
   if (pick) pick.onclick = async () => { say(await chooseBackupFile()); renderBackupPanel(el); };
   if (stop) stop.onclick = async () => { await stopBackupFile(); renderBackupPanel(el); };
-  document.getElementById("imp").onclick = () => {
+  document.getElementById("imp").onclick = async () => {
     const out = document.getElementById("iomsg");
-    try { const s = JSON.parse(document.getElementById("io").value); if (!s || !s.cards) throw 0; state = normalize(s); store.replaceState(false); out.textContent = `Progress loaded (${Object.keys(state.cards).length} cards).`; }
+    try { const s = JSON.parse(document.getElementById("io").value); if (!s || !s.cards) throw 0; state = normalize(s); store.replaceState(false); await splitKanjiCards(); out.textContent = `Progress loaded (${Object.keys(state.cards).length} cards).`; }
     catch (e) { out.textContent = "That doesn't look like a progress backup."; }
   };
   if (dbReady) dbc.call("listSnapshots").then(list => {
@@ -767,7 +832,7 @@ function renderBackupPanel(el) {
       let armed = false;
       b.onclick = async () => {
         if (!armed) { armed = true; b.textContent = "Tap again to replace current progress"; return; }
-        try { applyRows(await dbc.call("restoreSnapshot", { id: b.dataset.snap })); changeSeq++; say("Snapshot restored."); setTimeout(() => go("home"), 1000); }
+        try { applyRows(await dbc.call("restoreSnapshot", { id: b.dataset.snap })); await splitKanjiCards(); changeSeq++; say("Snapshot restored."); setTimeout(() => go("home"), 1000); }
         catch (e) { say("Couldn't restore: " + e.message); }
       };
     });
@@ -817,9 +882,11 @@ function planWaniKani(wk, spreadDays) {
     if (it.kind === "kanji" ? builtK.has(it.ch) : builtW.has(it.ch)) sum[it.kind === "kanji" ? "coreK" : "coreW"]++;
     const stage = it.stage || 0; sum.stages[stage]++;
     if (stage < 1) { sum.lessons++; return; }          // not started on WaniKani: stays a new card here
-    const deck = it.kind === "kanji" ? "kanji" : "words", id = cardId(deck, it.ch);
+    // A WaniKani kanji gives both a meaning card and a reading card here.
+    for (const deck of it.kind === "kanji" ? ["kanji", "readings"] : ["words"]) {
+    const id = cardId(deck, it.ch);
     const mine = state.cards[id];
-    if (mine && mine.t !== "new") { sum.kept++; return; }
+    if (mine && mine.t !== "new") { sum.kept++; continue; }
     const st = it.stats;
     const card = { t: "review", s: 0, ivl: WK_IVL[stage], e: wkEase(st),
       r: st ? Math.max(st.mc + st.mi, st.rc + st.ri) : 1, l: st ? st.mi + st.ri : 0 };
@@ -829,6 +896,7 @@ function planWaniKani(wk, spreadDays) {
     const acc = st && (st.mc + st.mi + st.rc + st.ri) ? (st.mc + st.rc) / (st.mc + st.mi + st.rc + st.ri) : 1;
     if (dayNum(due) <= td) overdue.push({ id, card, stage, acc });
     else { card.due = due; sum.future++; cards.push(cardToRow(id, card)); }
+    }
   });
   overdue.sort((a, b) => a.stage - b.stage || a.acc - b.acc);
   const days = Math.max(1, spreadDays);
@@ -907,11 +975,11 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => go(b.dataset.view));
 function go(v) {
-  view = v; session = v === "study" ? session : null;
+  view = v; session = v === "study" ? session : null; if (v !== "study") classScope = null;
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.view === v || (v === "study" && b.dataset.view === "home")));
   render();
 }
-function render() { ({ home: renderHome, study: renderStudy, browse: renderBrowse, settings: renderSettings })[view](); }
+function render() { ({ home: renderHome, study: renderStudy, class: renderClass, browse: renderBrowse, settings: renderSettings })[view](); }
 
 function streak() {
   let s = 0, d = today(); if (!state.history[d]) d--;
@@ -925,7 +993,7 @@ function renderHome() {
   const totals = { nw: 0, lr: 0, due: 0 };
   const rows = DECKS.map(d => {
     const c = deckCounts(d.id); totals.nw += c.nw; totals.lr += c.lr; totals.due += c.due;
-    const extra = d.id === "words" && lockedWords() ? ` · ${lockedWords()} still locked` : "";
+    const extra = d.id === "words" && lockedWords() ? ` · ${lockedWords()} still locked` : d.id === "class" && !CLASS.length ? ` · paste a list in the <b>Class</b> tab` : d.id === "class" ? ` · ${CLASS.length} words` : "";
     return `<div class="panel deck">
       <div><div class="name">${d.name}</div><div class="desc">${d.desc}${extra}</div></div>
       <div class="counts"><span class="c-new" title="New">${c.nw}</span><span class="c-learn" title="Learning">${c.lr}</span><span class="c-due" title="Due">${c.due}</span></div>
@@ -1035,23 +1103,31 @@ function checkMeaning(given, accepted) {
   }
   return { ok: false };
 }
-// Questions per card. Recall (meaning → write the kanji) stays self-graded.
+// Questions per card. Kanji cards ask one thing each (meaning card / reading card); word
+// cards ask reading then meaning. Recall (meaning → write the kanji) stays self-graded.
+const wordOf = cur => cur.deck === "class" ? CMAP[cur.key] : WMAP[cur.key];
+const hasKanji = w => /[\u3400-\u9fff\uf900-\ufaff々]/.test(w);
 function questionsFor(cur) {
   if (!state.settings.typeMode || cur.deck === "recall") return [];
   if (cur.deck === "kanji") {
     const k = KMAP[cur.key];
-    return [{ kind: "meaning", accept: withExtra(meaningAnswers(k.meaning), k.acceptM), show: k.meaning },
-            { kind: "reading", accept: kanjiReadings(k), show: [k.on, k.kun].filter(Boolean).join(" / "), any: true }];
+    return [{ kind: "meaning", accept: withExtra(meaningAnswers(k.meaning), k.acceptM), show: k.meaning }];
   }
-  const w = WMAP[cur.key];
-  return [{ kind: "reading", accept: [kataToHira(w.r), ...(w.acceptR || []).map(kataToHira)], show: [w.r, ...(w.acceptR || [])].join("、") },
-          { kind: "meaning", accept: withExtra(meaningAnswers(w.m), w.acceptM), show: w.m }];
+  if (cur.deck === "readings") {
+    const k = KMAP[cur.key];
+    return [{ kind: "reading", accept: kanjiReadings(k), show: [k.on, k.kun].filter(Boolean).join(" / "), any: true }];
+  }
+  const w = wordOf(cur), qs = [];
+  // Class words written only in kana have nothing to read, so they just ask the meaning.
+  if (w.r && hasKanji(w.w)) qs.push({ kind: "reading", accept: [kataToHira(w.r), ...(w.acceptR || []).map(kataToHira)].map(r => r.replace(/[〜～~]/g, "")), show: [w.r, ...(w.acceptR || [])].join("、") });
+  if (w.m) qs.push({ kind: "meaning", accept: withExtra(meaningAnswers(w.m), w.acceptM), show: w.m });
+  return qs;
 }
 // Extra accepted meanings (WaniKani alternatives and your own synonyms).
 const withExtra = (list, extra) => [...new Set([...list, ...(extra || []).flatMap(meaningAnswers)])];
 
 /* ============================== STUDY ============================== */
-function startSession(decks) { session = { decks, cur: null, shown: false, undo: [], done: 0, right: 0, typed: 0 }; lastShown = null; view = "study"; nextCard(); }
+function startSession(decks, scope = null) { session = { decks, cur: null, shown: false, undo: [], done: 0, right: 0, typed: 0 }; classScope = scope; lastShown = null; recentSibs = []; view = "study"; nextCard(); }
 function setupCard() { const s = session; s.shown = false; s.qs = s.cur ? questionsFor(s.cur) : []; s.qi = 0; s.res = []; s.suggest = null; s.fb = null; s.warn = ""; s.typedVal = ""; s.shownAt = Date.now(); }
 function nextCard() { const p = pickNext(session.decks); session.cur = p.none ? null : p; session.wait = p.none ? p.nextLearn : null; setupCard(); render(); }
 
@@ -1073,11 +1149,11 @@ function answerCard(cur, misses) {
   const alts = list => list && list.length ? `<div class="alt">Also accepted: ${esc(list.join(", "))}</div>` : "";
   const join = s => (s || "").split("、").filter(Boolean).join("、 ");
   let m, r, extra = "";
-  if (cur.deck === "words") {
-    const w = WMAP[cur.key];
+  if (cur.deck === "words" || cur.deck === "class") {
+    const w = wordOf(cur);
     m = sec("meaning", "Meaning", `<div class="main">${esc(w.m)}</div>${alts(w.acceptM)}`);
-    r = sec("reading", "Reading", `<div class="main" style="font-family:'Noto Sans JP',sans-serif">${esc([w.r, ...(w.acceptR || [])].join("、 "))}</div>`);
-    extra = `<div class="breakdown">${w.ks.map(ch => `<div class="bk"><span>${ch}</span>${esc(KMAP[ch].meaning)}</div>`).join("")}</div>`;
+    r = w.r && w.r !== w.w ? sec("reading", "Reading", `<div class="main" style="font-family:'Noto Sans JP',sans-serif">${esc([w.r, ...(w.acceptR || [])].join("、 "))}</div>`) : "";
+    extra = breakdown(w);
   } else {
     const k = KMAP[cur.key];
     m = sec("meaning", "Meaning", `<div class="main">${esc(k.meaning)}</div>${alts(k.acceptM)}`);
@@ -1094,8 +1170,11 @@ function answerCard(cur, misses) {
     extra = `<div class="examples" style="margin-top:10px">${KMAP[cur.key].examples.map(e => `<div class="ex"><span class="w">${esc(e.w)}</span><span class="r">${esc(e.r)}</span><span>${esc(e.m)}</span></div>`).join("")}</div>`;
   return `<div class="fbcard">${head}<div class="fbbody">${missed("reading") && !missed("meaning") ? r + m : m + r}${extra}</div></div>`;
 }
+function breakdown(w) {
+  return w.ks.length ? `<div class="breakdown">${w.ks.map(ch => `<div class="bk"><span>${ch}</span>${esc(KMAP[ch].meaning)}</div>`).join("")}</div>` : "";
+}
 function speakText(cur) {
-  if (cur.deck === "words") return WMAP[cur.key].r;
+  if (cur.deck === "words" || cur.deck === "class") { const w = wordOf(cur); return w.r || w.w; }
   const k = KMAP[cur.key]; return k.examples[0] ? k.examples[0].r : "";
 }
 function resultsHtml(s) {
@@ -1119,15 +1198,14 @@ function renderStudy() {
     return;
   }
   const cur = s.cur, c = cur.c; let front = "", back = "", tag = "";
-  if (cur.deck === "kanji") {
-    const k = KMAP[cur.key]; tag = "Kanji · meaning & reading";
+  if (cur.deck === "kanji" || cur.deck === "readings") {
+    const k = KMAP[cur.key]; tag = cur.deck === "kanji" ? "Kanji · meaning" : "Kanji · reading";
     front = `<div class="kanji-big">${esc(k.k)}</div>`;
     back = kanjiInfo(k);
-  } else if (cur.deck === "words") {
-    const w = WMAP[cur.key]; tag = "Word · reading & meaning";
+  } else if (cur.deck === "words" || cur.deck === "class") {
+    const w = wordOf(cur); tag = cur.deck === "class" ? `Class · ${esc(w.list)}` : "Word · reading & meaning";
     front = `<div class="word-big">${esc(w.w)}</div>`;
-    back = `<div class="reading">${esc(w.r)}</div><div class="meaning" style="margin-top:6px">${esc(w.m)}</div>
-      <div class="breakdown">${w.ks.map(ch => `<div class="bk"><span>${ch}</span>${esc(KMAP[ch].meaning)}</div>`).join("")}</div>`;
+    back = `${w.r && w.r !== w.w ? `<div class="reading">${esc(w.r)}</div>` : ""}<div class="meaning" style="margin-top:6px">${esc(w.m)}</div>${breakdown(w)}`;
   } else {
     const k = KMAP[cur.key]; tag = "Recall · write the kanji";
     front = `<div class="prompt">${esc(k.meaning)}</div><div class="sub">Picture or write the kanji, then check.</div>`;
@@ -1264,7 +1342,7 @@ function answer(g) {
       state_before: before.t, interval_before: before.ivl || 0, ease_before: before.e, due_before_ms: before.due || null,
       state_after: after.t, interval_after: after.ivl || 0, ease_after: after.e, due_after_ms: after.due },
   });
-  s.done++; lastShown = cur.id; nextCard();
+  s.done++; lastShown = cur.id; recentSibs = [sibKey(cur.deck, cur.key), ...recentSibs].slice(0, 2); nextCard();
 }
 function undo() {
   const s = session; if (!s || !s.undo.length) return;
@@ -1274,7 +1352,7 @@ function undo() {
   s.done = Math.max(0, s.done - 1); s.typed -= u.typed || 0; s.right -= u.right || 0;
   store.undoReview({ cardId: u.id, prevCard: u.prev ? cardToRow(u.id, u.prev) : null, ts: u.ts, daily: dailyRow() });
   const [deckLetter, ...rest] = u.id.split(":"); const key = rest.join(":");
-  const deck = DECKS.find(d => d.id[0] === deckLetter).id;
+  const deck = DECK_BY_LETTER[deckLetter];
   s.cur = { id: u.id, key, deck, c: getCard(u.id) }; setupCard(); lastShown = null; render();
 }
 document.addEventListener("keydown", e => {
@@ -1291,6 +1369,156 @@ document.addEventListener("keydown", e => {
   else if (e.key === "z" || e.key === "Z") undo();
   else if (e.key === "s" || e.key === "S") { if (s.cur && s.shown) speak(speakText(s.cur)); }
 });
+
+/* ============================== KANJI FONT ============================== */
+// Fonts for kanji and words (the rest of the app stays in Noto Sans JP). All come from
+// Google Fonts and are cached by the service worker, see warmFont() for offline use.
+const FONTS = {
+  klee:    { name: "Klee One",        q: "Klee+One:wght@400;600",        w: 600, label: "Klee One", note: "textbook handwriting" },
+  zenmaru: { name: "Zen Maru Gothic", q: "Zen+Maru+Gothic:wght@500;700", w: 500, label: "Zen Maru Gothic", note: "rounded" },
+  sans:    { name: "Noto Sans JP",    q: "Noto+Sans+JP:wght@400;500;700", w: 500, label: "Noto Sans JP", note: "clean gothic" },
+  serif:   { name: "Noto Serif JP",   q: "Noto+Serif+JP:wght@500;700",   w: 500, label: "Noto Serif JP", note: "print mincho (old)" },
+};
+const fontCss = f => `https://fonts.googleapis.com/css2?family=${f.q}&display=swap`;
+function applyFont() {
+  const f = FONTS[state.settings.jpFont] || FONTS.klee;
+  const link = document.getElementById("jpfont");
+  if (link.getAttribute("href") !== fontCss(f)) link.href = fontCss(f);
+  document.documentElement.style.setProperty("--jp", `"${f.name}","Noto Sans JP",sans-serif`);
+  document.documentElement.style.setProperty("--jpw", f.w);
+  warmFont(f);
+}
+// Japanese web fonts come in ~100 slices by character range and a browser only downloads
+// the slices for characters it has drawn. To make the font work offline for every card,
+// ask for all characters in the app's content once (the service worker caches each slice).
+// Redone when the content grows, e.g. after a WaniKani import or a new class list.
+function warmFont(f) {
+  if (!document.fonts || !navigator.onLine) return;
+  const chars = new Set("ぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわをんゔァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロワヲンヴー・、。々〜");
+  for (const k of KANJI) chars.add(k.k);
+  for (const w of [...WORDS, ...CLASS]) for (const c of w.w) chars.add(c);
+  const key = `kanji-srs-font:${f.name}:${chars.size}`;
+  try { if (localStorage.getItem(key)) return; } catch (e) {}
+  const text = [...chars].join("");
+  const run = () => Promise.all([document.fonts.load(`${f.w} 40px "${f.name}"`, text), document.fonts.load(`400 40px "Noto Sans JP"`, text)])
+    .then(() => { try { localStorage.setItem(key, "1"); } catch (e) {} }).catch(() => {});
+  // The stylesheet has to be in before its @font-face rules exist.
+  const link = document.getElementById("jpfont");
+  const later = () => (window.requestIdleCallback || setTimeout)(run, { timeout: 4000 });
+  if (link.sheet) later(); else link.addEventListener("load", later, { once: true });
+}
+
+/* ============================== CLASS WORDS ============================== */
+// Paste the vocabulary list from class, one word per line. Accepted shapes (any order of
+// the Japanese parts, any separator, columns pasted from a spreadsheet work too):
+//   食べる たべる to eat · 毎日 - まいにち - every day · 学校（がっこう）school · ありがとう = thank you
+// The Japanese part with kanji is the word and a kana-only part its reading; whatever is
+// left is the English meaning. A word without reading or meaning borrows them from the
+// app's own vocabulary when it knows the word.
+const JP_RUN = /[\u3005\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uff66-\uff9f〜～]+/g;
+function parseClassList(text) {
+  const words = [], problems = [], seen = new Set();
+  for (let line of text.split(/\r?\n/)) {
+    const raw = line.trim(); if (!raw) continue;
+    line = raw.replace(/^\s*(?:\d+\s*[.)．、:]|[-*•・])\s*/, "");      // list numbering / bullets
+    const runs = (line.match(JP_RUN) || []).map(r => r.replace(/^・+|・+$/g, "")).filter(r => r.replace(/[〜～ー・]/g, ""));
+    if (!runs.length) { if (/[a-z]/i.test(line) && !/^(word|japanese|vocab|kanji|reading|meaning|english)/i.test(line)) problems.push(`No Japanese in “${raw}”`); continue; }
+    const kanjiRun = runs.find(hasKanji);
+    const w = kanjiRun || runs[0];
+    const kana = runs.filter(r => r !== w && !hasKanji(r));
+    let r = kanjiRun ? (kana[0] || "") : w;
+    let m = line.replace(JP_RUN, " ").replace(/[（(]\s*[)）]|[「」【】『』]/g, " ")
+      .replace(/^[\s\-–—=:：|,，、;；/\t]+|[\s\-–—=:：|,，、;；/\t]+$/g, "").replace(/\s*\t\s*/g, "; ").replace(/\s+/g, " ").trim();
+    const known = WMAP[w] || CMAP[w];
+    if (known) { if (!r) r = known.r; if (!m) m = known.m; }
+    if (!m) { problems.push(`No English meaning for ${w}`); continue; }
+    if (seen.has(w)) continue; seen.add(w);
+    words.push({ w, r: kataToHira(r) === kataToHira(w) && !hasKanji(w) ? "" : r, m, noReading: hasKanji(w) && !r });
+  }
+  return { words, problems };
+}
+const classLists = () => { const m = new Map(); for (const w of CLASS) m.set(w.list, (m.get(w.list) || 0) + 1); return [...m]; };
+function classListStats(list) {
+  const now = Date.now(), td = today(); let fresh = 0, due = 0, learned = 0;
+  for (const w of CLASS) if (w.list === list) {
+    const c = getCard(cardId("class", w.w));
+    if (c.t === "new") fresh++; else { learned++; if (c.t !== "review" ? c.due <= now + 20 * MIN : dayNum(c.due) <= td) due++; }
+  }
+  return { fresh, due, learned };
+}
+let classDraft = null;
+function renderClass() {
+  const lists = classLists();
+  const defName = `Class ${new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+  const listRows = lists.map(([name, n]) => {
+    const st = classListStats(name);
+    return `<div class="deck clist">
+      <div><div class="name">${esc(name)}</div><div class="desc">${n} words · ${st.learned} started · ${st.due} due · ${st.fresh} new</div></div>
+      <button class="btn primary" data-study="${esc(name)}">Practice</button>
+      <button class="btn" data-del="${esc(name)}">Remove</button>
+    </div>`;
+  }).join("");
+  const draft = classDraft ? `<div class="preview">
+      <p class="hint" style="margin:0 0 6px"><b>${classDraft.words.length}</b> word${classDraft.words.length === 1 ? "" : "s"} ready to add to <b>${esc(classDraft.list)}</b>. Check them, then add.</p>
+      <table class="ctable"><tr><th>Word</th><th>Reading</th><th>Meaning</th></tr>
+      ${classDraft.words.map(w => `<tr><td class="jw">${esc(w.w)}</td><td>${w.noReading ? '<span class="warnc">none, meaning only</span>' : esc(w.r || "—")}</td><td>${esc(w.m)}${CMAP[w.w] ? ' <span class="hint">(updates)</span>' : ""}</td></tr>`).join("")}</table>
+      ${classDraft.problems.length ? `<p class="warnc" style="margin:8px 0 0">Skipped ${classDraft.problems.length} line${classDraft.problems.length === 1 ? "" : "s"}: ${esc(classDraft.problems.slice(0, 8).join(" · "))}${classDraft.problems.length > 8 ? " …" : ""}</p>` : ""}
+      <div class="btnrow" style="margin-top:10px"><button class="btn primary" id="cl-add" ${classDraft.words.length ? "" : "disabled"}>Add ${classDraft.words.length} words</button><button class="btn" id="cl-cancel">Cancel</button></div>
+    </div>` : "";
+  main.innerHTML = `<div class="panel">
+    <h2 style="margin-top:0">Class words</h2>
+    <p class="hint" style="margin-top:0">Paste the vocabulary list from your Japanese class, one word per line, like <code>食べる たべる to eat</code>, <code>毎日 - まいにち - every day</code> or columns copied from a spreadsheet. Class words are their own deck with their own schedule, so you can practice just them.</p>
+    ${CLASS.length ? `<button class="btn primary big" id="cl-all" style="margin-top:4px">Practice all class words · <span>${CLASS.length} words</span></button>` : ""}
+    <div class="decks">${listRows}</div>
+    <h2>Add a list</h2>
+    <div class="row" style="margin:0 0 8px"><label for="cl-name">List name</label><input id="cl-name" value="${esc(classDraft ? classDraft.list : defName)}" style="flex:1;max-width:260px"></div>
+    <textarea id="cl-text" class="cl-text" placeholder="食べる　たべる　to eat&#10;飲む - のむ - to drink&#10;ありがとう = thank you">${esc(classDraft ? classDraft.text : "")}</textarea>
+    <div class="btnrow"><button class="btn" id="cl-preview">Preview</button></div>
+    <div class="msg" id="cl-msg"></div>
+    ${draft}
+  </div>`;
+  const msg = document.getElementById("cl-msg");
+  document.getElementById("cl-preview").onclick = () => {
+    const text = document.getElementById("cl-text").value, list = document.getElementById("cl-name").value.trim() || defName;
+    const p = parseClassList(text);
+    if (!p.words.length && !p.problems.length) { msg.textContent = "Paste your word list first."; return; }
+    classDraft = { ...p, text, list }; render();
+  };
+  const all = document.getElementById("cl-all"); if (all) all.onclick = () => startSession(["class"]);
+  main.querySelectorAll("[data-study]").forEach(b => b.onclick = () => startSession(["class"], b.dataset.study));
+  main.querySelectorAll("[data-del]").forEach(b => {
+    let armed = false;
+    b.onclick = async () => {
+      if (!armed) { armed = true; b.textContent = "Tap again to remove"; return; }
+      const words = CLASS.filter(w => w.list === b.dataset.del).map(w => w.w);
+      try { await saveClassItems(dbReady ? dbc.call("deleteItems", { kind: "class", items: words }) : null, list => list.filter(r => !(r.kind === "class" && words.includes(r.item)))); }
+      catch (e) { msg.textContent = "Couldn't remove: " + e.message; return; }
+      render();
+    };
+  });
+  if (classDraft) {
+    document.getElementById("cl-cancel").onclick = () => { classDraft = null; render(); };
+    document.getElementById("cl-add").onclick = async e => {
+      e.target.disabled = true;
+      const base = Date.now();
+      const rows = classDraft.words.map((w, i) => ({ kind: "class", item: w.w, source: "class", sort: base + i,
+        data_json: JSON.stringify({ r: w.noReading ? "" : w.r, m: w.m, list: classDraft.list }) }));
+      try {
+        await saveClassItems(dbReady ? dbc.call("putItems", { items: rows }) : null,
+          list => [...list.filter(r => !(r.kind === "class" && rows.some(x => x.item === r.item))), ...rows]);
+      } catch (err) { msg.textContent = "Couldn't add: " + err.message; e.target.disabled = false; return; }
+      const n = rows.length; classDraft = null; render();
+      document.getElementById("cl-msg").textContent = `Added ${n} words. Tap Practice to start.`;
+    };
+  }
+}
+// Write class items to SQLite (p resolves to the reloaded data) or, without a database, to
+// the local fallback copy kept in state.extraItems. `edit` updates that local copy.
+async function saveClassItems(p, edit) {
+  if (p) { const data = await p; buildContent(data.items); changeSeq++; scheduleAutoBackup(); }
+  else { state.extraItems = edit(state.extraItems || []); buildContent(state.extraItems); persistLocal(); }
+  applyFont();
+}
 
 function tileClass(c) { if (c.t === "new") return ""; if (c.t === "review") return c.ivl >= 21 ? "mature" : "young"; return "learn"; }
 function renderBrowse() {
@@ -1314,7 +1542,7 @@ function openKanji(ch) {
   root.innerHTML = `<div class="modal-bg" id="mbg"><div class="panel modal">
     <button class="close" id="mclose" aria-label="Close">✕</button>
     <div class="kanji-big">${k.k}</div>${kanjiInfo(k, { lock: true })}
-    <div class="cardstats">${cardLine("Kanji card", getCard(cardId("kanji", ch)))}<br>${cardLine("Recall card", getCard(cardId("recall", ch)))}</div>
+    <div class="cardstats">${cardLine("Meaning card", getCard(cardId("kanji", ch)))}<br>${cardLine("Reading card", getCard(cardId("readings", ch)))}<br>${cardLine("Recall card", getCard(cardId("recall", ch)))}</div>
     <button class="btn" id="mspeak" style="margin-top:12px">🔊 Hear examples</button>
   </div></div>`;
   const close = () => root.innerHTML = "";
@@ -1328,9 +1556,13 @@ function renderSettings() {
   main.innerHTML = `<div class="panel">
     <h2 style="margin-top:0">New cards per day</h2>
     ${DECKS.map(d => `<div class="row"><label for="np-${d.id}">${d.name}<br><span class="hint">${d.desc}</span></label><input type="number" min="0" max="200" id="np-${d.id}" value="${np[d.id]}"></div>`).join("")}
-    <div class="row"><label for="typemode">Type your answers<br><span class="hint">Kanji and word cards ask for the meaning and the reading, check them and grade for you. Turn off to flip and grade yourself, like Anki.</span></label><input type="checkbox" id="typemode" ${state.settings.typeMode ? "checked" : ""}></div>
+    <div class="row"><label for="typemode">Type your answers<br><span class="hint">Kanji meaning and reading cards ask for that one answer, word cards ask for the reading and the meaning; the app checks them and grades for you. Turn off to flip and grade yourself, like Anki.</span></label><input type="checkbox" id="typemode" ${state.settings.typeMode ? "checked" : ""}></div>
     <div class="row"><label for="autograde">Grade automatically<br><span class="hint">Like WaniKani: right answers count as Good and go straight to the next card, misses count as Again. Turn off to see the answer and pick Again, Hard, Good or Easy yourself. Recall cards always use the buttons.</span></label><input type="checkbox" id="autograde" ${state.settings.autoGrade ? "checked" : ""}></div>
     <div class="row"><label for="autospeak">Speak the reading when the answer is shown</label><input type="checkbox" id="autospeak" ${state.settings.autoSpeak ? "checked" : ""}></div>
+    <h2>Kanji font</h2>
+    <p class="hint" style="margin:0">Used for kanji and words on the cards. Works offline once it has loaded.</p>
+    <div class="fontpick">${Object.entries(FONTS).map(([id, f]) => `<button data-font="${id}" class="${(state.settings.jpFont || "klee") === id ? "on" : ""}">
+      <span class="s" style="font-family:'${f.name}',sans-serif;font-weight:${f.w}">漢字書</span>${esc(f.label)}<br><small>${esc(f.note)}</small></button>`).join("")}</div>
     <h2>Scheduling</h2>
     <p class="hint">Anki defaults: learning steps 1m and 10m, graduating interval 1 day, easy interval 4 days, starting ease 250%, relearning step 10m, new day starts at 4 a.m.</p>
     <h2>Import from WaniKani</h2>
@@ -1348,6 +1580,12 @@ function renderSettings() {
   document.getElementById("typemode").onchange = e => { state.settings.typeMode = e.target.checked; store.settings(); };
   document.getElementById("autograde").onchange = e => { state.settings.autoGrade = e.target.checked; store.settings(); };
   document.getElementById("autospeak").onchange = e => { state.settings.autoSpeak = e.target.checked; store.settings(); };
+  if (!document.getElementById("fontpreview")) { // just the three sample characters of each font
+    const l = document.createElement("link"); l.id = "fontpreview"; l.rel = "stylesheet";
+    l.href = `https://fonts.googleapis.com/css2?${Object.values(FONTS).map(f => "family=" + f.q).join("&")}&text=${encodeURIComponent("漢字書")}&display=swap`;
+    document.head.appendChild(l);
+  }
+  main.querySelectorAll("[data-font]").forEach(b => b.onclick = () => { state.settings.jpFont = b.dataset.font; store.settings(); applyFont(); renderSettings(); });
   renderBackupPanel(document.getElementById("backup-panel"));
   renderWaniKaniPanel(document.getElementById("wk-panel"));
   let armed = false;
