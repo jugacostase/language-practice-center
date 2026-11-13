@@ -461,11 +461,19 @@ function rollDay() {
   if (state.daily.day !== td) state.daily = { day: td, newDone: {}, reviews: 0 };
 }
 function introduced(k) { return getCard(cardId("kanji", k)).t !== "new"; }
+// A random but stable-for-the-day number per card, used to shuffle: the order changes each
+// day but stays put during the day, so counts and the new-card pick don't jump around.
+function shuffleKey(id) {
+  let h = 2166136261 ^ today();
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  return (h >>> 0) / 4294967296;
+}
 let classScope = null; // a class list name to study only that list, or null for every class word
 function deckCards(deck) { // ordered list of {id, key} available (unlocked) in this deck
   if (deck === "kanji") return KANJI.map(k => ({ id: cardId("kanji", k.k), key: k.k }));
   if (deck === "readings") return KANJI.filter(k => introduced(k.k)).map(k => ({ id: cardId("readings", k.k), key: k.k }));
-  if (deck === "class") return CLASS.filter(w => !classScope || w.list === classScope).map(w => ({ id: cardId("class", w.w), key: w.w }));
+  if (deck === "class") return CLASS.filter(w => !classScope || w.list === classScope).map(w => ({ id: cardId("class", w.w), key: w.w }))
+    .sort((a, b) => shuffleKey(a.id) - shuffleKey(b.id)); // class words come in a random order, not the pasted one
   if (deck === "words") return WORDS.filter(w => w.ks.every(introduced)).map(w => ({ id: cardId("words", w.w), key: w.w }));
   if (deck === "recall") return KANJI.filter(k => { const c = getCard(cardId("kanji", k.k)); return (c.t === "review" && c.ivl >= 3) || c.t === "relearn"; })
     .map(k => ({ id: cardId("recall", k.k), key: k.k }));
@@ -504,7 +512,8 @@ function pickNext(decks) {
   const fresh = it => it.id !== lastShown && !recentSibs.includes(sibKey(it.deck, it.key));
   const avoid = arr => arr.find(fresh) || arr.find(it => it.id !== lastShown) || arr[0];
   learn.sort((a, b) => a.c.due - b.c.due);
-  rev.sort((a, b) => a.c.due - b.c.due);
+  // Reviews: oldest due day first, shuffled within a day (so cards learned together don't come back in the same order).
+  rev.sort((a, b) => dayNum(a.c.due) - dayNum(b.c.due) || shuffleKey(a.id) - shuffleKey(b.id));
   // Interleave new cards: kanji first, so their words unlock right after.
   news.sort((a, b) => DECKS.findIndex(d => d.id === a.deck) - DECKS.findIndex(d => d.id === b.deck));
   const mix = (r, n) => r.length && n.length ? (Math.random() < r.length / (r.length + n.length) ? r[0] : n[0]) : r[0] || n[0];
