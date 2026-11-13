@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 -- Current scheduling state of every card that has been studied at least once.
 CREATE TABLE IF NOT EXISTS cards (
-  card_id        TEXT PRIMARY KEY,          -- 'k:日' meaning, 'y:日' reading, 'w:毎日', 'r:日', 'c:食べる'
-  deck           TEXT NOT NULL,             -- kanji | readings | words | recall | class
+  card_id        TEXT PRIMARY KEY,          -- 'k:日' meaning, 'y:日' reading, 'w:毎日', 'r:日', 'c:食べる' class meaning, 'd:食べる' class reading
+  deck           TEXT NOT NULL,             -- kanji | readings | words | recall | class | classread
   item           TEXT NOT NULL,             -- the kanji or word itself
   state          TEXT NOT NULL,             -- new | learn | review | relearn
   step           INTEGER NOT NULL DEFAULT 0,-- index into the learning/relearning steps
@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS daily (
   new_words  INTEGER NOT NULL DEFAULT 0,
   new_recall INTEGER NOT NULL DEFAULT 0,
   new_readings INTEGER NOT NULL DEFAULT 0,
-  new_class  INTEGER NOT NULL DEFAULT 0
+  new_class  INTEGER NOT NULL DEFAULT 0,
+  new_classread INTEGER NOT NULL DEFAULT 0
 );
 -- Study content added on top of the built-in N5 list (e.g. imported from WaniKani).
 -- For an item the app already has, the row only adds extra accepted answers.
@@ -89,7 +90,7 @@ function openDb() {
   run(SCHEMA);
   // Columns added after the first release (schema 3): new-card counters of the newer decks.
   const dailyCols = q("PRAGMA table_info(daily)").map(r => r.name);
-  for (const col of ["new_readings", "new_class"])
+  for (const col of ["new_readings", "new_class", "new_classread"])
     if (!dailyCols.includes(col)) run(`ALTER TABLE daily ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`);
   run("INSERT OR IGNORE INTO meta(key, value) VALUES ('created_ms', ?)", [String(Date.now())]);
   setMeta("schema_version", SCHEMA_VERSION);
@@ -122,7 +123,7 @@ function loadAll() {
 const CARD_COLS = ["card_id", "deck", "item", "state", "step", "due_ms", "interval_days", "ease", "reps", "lapses", "last_review_ms"];
 const REVIEW_COLS = ["ts_ms", "study_day", "card_id", "deck", "item", "grade", "typed", "typed_correct", "answers_json", "answer_ms",
   "state_before", "interval_before", "ease_before", "due_before_ms", "state_after", "interval_after", "ease_after", "due_after_ms"];
-const DAILY_COLS = ["study_day", "date", "reviews", "new_kanji", "new_words", "new_recall", "new_readings", "new_class"];
+const DAILY_COLS = ["study_day", "date", "reviews", "new_kanji", "new_words", "new_recall", "new_readings", "new_class", "new_classread"];
 const upsertSql = (table, cols, key) =>
   `INSERT INTO ${table}(${cols.join(",")}) VALUES (${cols.map(c => "$" + c).join(",")})
    ON CONFLICT(${key}) DO UPDATE SET ${cols.filter(c => c !== key).map(c => `${c}=excluded.${c}`).join(",")}`;
@@ -283,9 +284,9 @@ const ops = {
   },
   readWaniKani({ bytes }) { return readWaniKani(bytes); },
   // One-time split of kanji cards into meaning + reading cards, after a snapshot of the old state.
-  splitCards({ cards }) {
+  splitCards({ cards, metaKey = "split_readings_ms" }) {
     if (cards.length) { try { pool.importDb(`${SNAP_PREFIX}pre-split-${Date.now()}.sqlite3`, exportBytes()); prune(/pre-split-/, 1); } catch (e) {} }
-    db.transaction(() => { cards.forEach(putCard); setMeta("split_readings_ms", Date.now()); });
+    db.transaction(() => { cards.forEach(putCard); setMeta(metaKey, Date.now()); });
   },
   // Class word lists: add/update words, or remove words (their cards are kept, so
   // pasting a word again picks its progress back up).
