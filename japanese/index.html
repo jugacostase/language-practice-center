@@ -128,7 +128,11 @@ hr.div{width:100%;border:none;border-top:1px dashed var(--line);margin:20px 0}
 .fbsec .rd dd{margin:0;font-family:"Noto Sans JP",sans-serif;font-size:22px}
 .fbsec .rd dd.none{font-size:15px;color:var(--muted)}
 .fbcard .breakdown{justify-content:flex-start;margin-top:8px}
-.flash{text-align:center;font-size:14px;font-weight:600;padding:6px 12px;border-radius:10px;margin:-4px auto 10px;width:fit-content;animation:flashfade 2.4s ease forwards}
+/* Result of the card just graded: shown at the bottom of the next card, right above the
+   answer box, so it stays visible when the phone keyboard pushes the page up. */
+.flash{text-align:center;font-size:14px;font-weight:600;padding:6px 12px;border-radius:10px;margin:16px auto 0;width:fit-content;animation:flashfade 2.4s ease forwards}
+/* While typing, the card shrinks to its content so the card, the result and the answer box fit above the keyboard. */
+.card.asking{min-height:0;padding:30px 20px 16px}
 .flash.ok{color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent)} .flash.bad{color:var(--again);background:color-mix(in srgb,var(--again) 14%,transparent)}
 @keyframes flashfade{0%,80%{opacity:1}100%{opacity:.35}}
 .answer button.sug{outline:2px solid currentColor;outline-offset:-2px}
@@ -1259,12 +1263,12 @@ function renderStudy() {
       <span class="hint">${status}</span>
       <span class="counts" style="margin-left:auto"><span class="c-new">${counts.nw}</span><span class="c-learn">${counts.lr}</span><span class="c-due">${counts.due}</span></span>
     </div>
-    ${flash}
-    <div class="panel card">
+    <div class="panel card${asking ? " asking" : ""}">
       <span class="tag">${tag}</span>
       <button class="speak" id="speak" title="Speak (S)" aria-label="Speak">🔊</button>
       ${front}
       ${resultsHtml(s)}
+      ${flash}
       ${fb ? answerCard(cur, [fb]) : ""}
       ${s.shown ? (anyWrong ? answerCard(cur, s.res.filter(r => !r.ok)) : `<hr class="div">${back}`) : ""}
     </div>
