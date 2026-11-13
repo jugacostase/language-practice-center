@@ -62,6 +62,29 @@ chosen number of days (default 30), lowest stage and accuracy first. Cards alrea
 this app keep their own progress, so re-importing is safe. The cache only has per-item totals,
 not a review log, so nothing is added to `reviews`. A pre-import snapshot is taken first.
 
+## Decks and card ids
+
+| prefix | deck | asks |
+|---|---|---|
+| `k:` | Kanji meaning | the kanji's English meaning |
+| `y:` | Kanji reading | any on'yomi or kun'yomi |
+| `w:` | Words | reading, then meaning |
+| `r:` | Kanji recall | meaning → write the kanji (self-graded) |
+| `c:` | Class words | reading (if the word has kanji), then meaning |
+
+Meaning and reading of a kanji used to share one `k:` card. On first start after that change
+the app copies each studied `k:` card's schedule into a new `y:` card (snapshot `pre-split-…`
+first, meta `split_readings_ms` marks it done). Cards of the same kanji or word are never
+shown back to back when anything else is available.
+
+Class words are pasted in the Class tab (one per line, Japanese + optional kana reading +
+English meaning, any separator) and stored in `items` with `kind = 'class'` and
+`data_json = {r, m, list}`. Removing a list deletes the items but keeps the cards, so
+pasting the words again resumes their progress.
+
+The kanji font (Settings) is loaded from Google Fonts; after it loads the app requests every
+character in its content once so the service worker caches all needed font slices for offline use.
+
 ## Schema
 
 ```
@@ -69,8 +92,8 @@ cards(card_id PK, deck, item, state, step, due_ms, interval_days, ease, reps, la
 reviews(review_id PK, ts_ms, study_day, card_id, deck, item, grade, typed, typed_correct,
         answers_json, answer_ms, state_before, interval_before, ease_before, due_before_ms,
         state_after, interval_after, ease_after, due_after_ms)
-daily(study_day PK, date, reviews, new_kanji, new_words, new_recall)
-items(kind, item, source, sort, data_json)  -- extra content, PK (kind, item)
+daily(study_day PK, date, reviews, new_kanji, new_words, new_recall, new_readings, new_class)
+items(kind, item, source, sort, data_json)  -- extra content (WaniKani, class words), PK (kind, item)
 settings(key PK, value JSON)      meta(key PK, value)
 view reviews_readable             -- local datetimes, seconds per answer
 ```
