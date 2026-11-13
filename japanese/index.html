@@ -379,13 +379,16 @@ const DECKS = [
   { id: "readings", letter: "y", name: "Kanji reading", desc: "See the kanji, give a reading. Unlocks once you've met the kanji", def: 10 },
   { id: "words", letter: "w", name: "Words", desc: "Vocabulary that unlocks as you learn its kanji", def: 15 },
   { id: "recall", letter: "r", name: "Kanji recall", desc: "See the meaning, picture or write the kanji. Unlocks once a kanji is past its first few days", def: 5 },
-  { id: "class", letter: "c", name: "Class words", desc: "The vocabulary lists you paste in from your Japanese class", def: 20 },
+  { id: "class", letter: "c", name: "Class words · meaning", desc: "The vocabulary lists you paste in from your Japanese class", def: 20 },
+  { id: "classread", letter: "d", name: "Class words · reading", desc: "Readings of the class words written with kanji", def: 20 },
 ];
 const DECK_LETTER = Object.fromEntries(DECKS.map(d => [d.id, d.letter]));
 const DECK_BY_LETTER = Object.fromEntries(DECKS.map(d => [d.letter, d.id]));
 const cardId = (deck, key) => DECK_LETTER[deck] + ":" + key; // k:日 meaning, y:日 reading, w:毎日, r:日, c:食べる
 // Cards about the same kanji (or the same word) are "siblings" and are never shown back to back.
-const sibKey = (deck, key) => (deck === "words" || deck === "class" ? "W:" : "K:") + key;
+const CLASS_DECKS = ["class", "classread"];
+const isClassDeck = deck => CLASS_DECKS.includes(deck);
+const sibKey = (deck, key) => (deck === "words" || isClassDeck(deck) ? "W:" : "K:") + key;
 
 /* ============================== STATE ============================== */
 const LS_KEY = "kanji-srs-v1";
@@ -476,7 +479,7 @@ let classScope = null; // a class list name to study only that list, or null for
 function deckCards(deck) { // ordered list of {id, key} available (unlocked) in this deck
   if (deck === "kanji") return KANJI.map(k => ({ id: cardId("kanji", k.k), key: k.k }));
   if (deck === "readings") return KANJI.filter(k => introduced(k.k)).map(k => ({ id: cardId("readings", k.k), key: k.k }));
-  if (deck === "class") return CLASS.filter(w => !classScope || w.list === classScope).map(w => ({ id: cardId("class", w.w), key: w.w }))
+  if (isClassDeck(deck)) return CLASS.filter(w => (!classScope || w.list === classScope) && (deck === "class" || hasReadingCard(w))).map(w => ({ id: cardId(deck, w.w), key: w.w }))
     .sort((a, b) => shuffleKey(a.id) - shuffleKey(b.id)); // class words come in a random order, not the pasted one
   if (deck === "words") return WORDS.filter(w => w.ks.every(introduced)).map(w => ({ id: cardId("words", w.w), key: w.w }));
   if (deck === "recall") return KANJI.filter(k => { const c = getCard(cardId("kanji", k.k)); return (c.t === "review" && c.ivl >= 3) || c.t === "relearn"; })
@@ -519,7 +522,9 @@ function pickNext(decks) {
   // Reviews: oldest due day first, shuffled within a day (so cards learned together don't come back in the same order).
   rev.sort((a, b) => dayNum(a.c.due) - dayNum(b.c.due) || shuffleKey(a.id) - shuffleKey(b.id));
   // Interleave new cards: kanji first, so their words unlock right after.
-  news.sort((a, b) => DECKS.findIndex(d => d.id === a.deck) - DECKS.findIndex(d => d.id === b.deck));
+  // Class meaning and reading cards count as one group, shuffled together.
+  const rank = deck => DECKS.findIndex(d => d.id === (isClassDeck(deck) ? "class" : deck));
+  news.sort((a, b) => rank(a.deck) - rank(b.deck) || (isClassDeck(a.deck) ? shuffleKey(a.id) - shuffleKey(b.id) : 0));
   const mix = (r, n) => r.length && n.length ? (Math.random() < r.length / (r.length + n.length) ? r[0] : n[0]) : r[0] || n[0];
   const learnOk = learn.filter(fresh);
   if (learnOk.length) return learnOk[0];
@@ -567,27 +572,35 @@ function applyRows(data) {
   for (const r of data.daily) if (r.reviews) st.history[r.study_day] = r.reviews;
   const t = data.daily.find(r => r.study_day === today());
   if (t) st.daily = { day: t.study_day, reviews: t.reviews, newDone: Object.fromEntries(DECKS.map(dk => [dk.id, t["new_" + dk.id] || 0])) };
-  st.splitDone = !!(data.meta && data.meta.split_readings_ms);
+  for (const sp of SPLITS) st[sp.flag] = !!(data.meta && data.meta[sp.meta]);
   state = st;
   if (data.reviewCount != null) reviewCount = data.reviewCount;
 }
-// One-time split of the old combined kanji card (meaning + reading on one card) into a
-// meaning card (k:, keeps its id and history) and a reading card (y:). The reading card
-// starts with a copy of the old card's schedule, so no progress is lost. Runs after any
-// load that may hold pre-split progress: first start, database import, snapshot restore.
+// One-time splits of an old combined card (meaning + reading on one card) into a meaning
+// card (keeps its id and history) and a reading card that starts with a copy of the old
+// card's schedule, so no progress is lost. Kanji: k: → k: + y:. Class words: c: → c: + d:.
+// Runs after any load that may hold pre-split progress: first start, database import, snapshot restore.
+const SPLITS = [
+  { flag: "splitDone", meta: "split_readings_ms", from: "k:", to: "y:", what: "kanji", applies: () => true },
+  { flag: "splitClassDone", meta: "split_class_ms", from: "c:", to: "d:", what: "class word", applies: key => CMAP[key] && hasReadingCard(CMAP[key]) },
+];
 async function splitKanjiCards() {
-  if (state.splitDone) return 0;
-  const add = [];
-  for (const [id, c] of Object.entries(state.cards)) {
-    if (!id.startsWith("k:") || c.t === "new") continue;
-    const y = "y:" + id.slice(2);
-    if (!state.cards[y]) { state.cards[y] = { ...c }; add.push(cardToRow(y, state.cards[y])); }
+  let total = 0;
+  for (const sp of SPLITS) {
+    if (state[sp.flag]) continue;
+    const add = [];
+    for (const [id, c] of Object.entries(state.cards)) {
+      if (!id.startsWith(sp.from) || c.t === "new" || !sp.applies(id.slice(2))) continue;
+      const to = sp.to + id.slice(2);
+      if (!state.cards[to]) { state.cards[to] = { ...c }; add.push(cardToRow(to, state.cards[to])); }
+    }
+    state[sp.flag] = true;
+    if (dbReady) await dbc.call("splitCards", { cards: add, metaKey: sp.meta });
+    else persistLocal();
+    if (add.length) { changeSeq++; migratedNote = (migratedNote ? migratedNote + " " : "") + `Meaning and reading are now separate cards: ${add.length} ${sp.what} reading card${add.length === 1 ? " was" : "s were"} created with the progress of their old card.`; }
+    total += add.length;
   }
-  state.splitDone = true;
-  if (dbReady) await dbc.call("splitCards", { cards: add });
-  else persistLocal();
-  if (add.length) { changeSeq++; migratedNote = (migratedNote ? migratedNote + " " : "") + `Meaning and reading are now separate cards. ${add.length} kanji reading cards were created with the progress of their old kanji card.`; }
-  return add.length;
+  return total;
 }
 
 const dbc = (() => {
@@ -1118,7 +1131,9 @@ function checkMeaning(given, accepted) {
 }
 // Questions per card. Kanji cards ask one thing each (meaning card / reading card); word
 // cards ask reading then meaning. Recall (meaning → write the kanji) stays self-graded.
-const wordOf = cur => cur.deck === "class" ? CMAP[cur.key] : WMAP[cur.key];
+const wordOf = cur => isClassDeck(cur.deck) ? CMAP[cur.key] : WMAP[cur.key];
+// Class words written with kanji get a separate reading card; kana-only ones have nothing to read.
+const hasReadingCard = w => !!w.r && hasKanji(w.w);
 const hasKanji = w => /[\u3400-\u9fff\uf900-\ufaff々]/.test(w);
 function questionsFor(cur) {
   if (!state.settings.typeMode || cur.deck === "recall") return [];
@@ -1131,9 +1146,9 @@ function questionsFor(cur) {
     return [{ kind: "reading", accept: kanjiReadings(k), show: [k.on, k.kun].filter(Boolean).join(" / "), any: true }];
   }
   const w = wordOf(cur), qs = [];
-  // Class words written only in kana have nothing to read, so they just ask the meaning.
-  if (w.r && hasKanji(w.w)) qs.push({ kind: "reading", accept: [kataToHira(w.r), ...(w.acceptR || []).map(kataToHira)].map(r => r.replace(/[〜～~]/g, "")), show: [w.r, ...(w.acceptR || [])].join("、") });
-  if (w.m) qs.push({ kind: "meaning", accept: withExtra(meaningAnswers(w.m), w.acceptM), show: w.m });
+  // Class words: the meaning card (class) and the reading card (classread) each ask one thing.
+  if (cur.deck !== "class" && w.r && hasKanji(w.w)) qs.push({ kind: "reading", accept: [kataToHira(w.r), ...(w.acceptR || []).map(kataToHira)].map(r => r.replace(/[〜～~]/g, "")), show: [w.r, ...(w.acceptR || [])].join("、") });
+  if (cur.deck !== "classread" && w.m) qs.push({ kind: "meaning", accept: withExtra(meaningAnswers(w.m), w.acceptM), show: w.m });
   return qs;
 }
 // Extra accepted meanings (WaniKani alternatives and your own synonyms).
@@ -1162,7 +1177,7 @@ function answerCard(cur, misses) {
   const alts = list => list && list.length ? `<div class="alt">Also accepted: ${esc(list.join(", "))}</div>` : "";
   const join = s => (s || "").split("、").filter(Boolean).join("、 ");
   let m, r, extra = "";
-  if (cur.deck === "words" || cur.deck === "class") {
+  if (cur.deck === "words" || isClassDeck(cur.deck)) {
     const w = wordOf(cur);
     m = sec("meaning", "Meaning", `<div class="main">${esc(w.m)}</div>${alts(w.acceptM)}`);
     r = w.r && w.r !== w.w ? sec("reading", "Reading", `<div class="main" style="font-family:'Noto Sans JP',sans-serif">${esc([w.r, ...(w.acceptR || [])].join("、 "))}</div>`) : "";
@@ -1187,7 +1202,7 @@ function breakdown(w) {
   return w.ks.length ? `<div class="breakdown">${w.ks.map(ch => `<div class="bk"><span>${ch}</span>${esc(KMAP[ch].meaning)}</div>`).join("")}</div>` : "";
 }
 function speakText(cur) {
-  if (cur.deck === "words" || cur.deck === "class") { const w = wordOf(cur); return w.r || w.w; }
+  if (cur.deck === "words" || isClassDeck(cur.deck)) { const w = wordOf(cur); return w.r || w.w; }
   const k = KMAP[cur.key]; return k.examples[0] ? k.examples[0].r : "";
 }
 function resultsHtml(s) {
@@ -1215,8 +1230,8 @@ function renderStudy() {
     const k = KMAP[cur.key]; tag = cur.deck === "kanji" ? "Kanji · meaning" : "Kanji · reading";
     front = `<div class="kanji-big">${esc(k.k)}</div>`;
     back = kanjiInfo(k);
-  } else if (cur.deck === "words" || cur.deck === "class") {
-    const w = wordOf(cur); tag = cur.deck === "class" ? `Class · ${esc(w.list)}` : "Word · reading & meaning";
+  } else if (cur.deck === "words" || isClassDeck(cur.deck)) {
+    const w = wordOf(cur); tag = isClassDeck(cur.deck) ? `Class · ${esc(w.list)} · ${cur.deck === "class" ? "meaning" : "reading"}` : "Word · reading & meaning";
     front = `<div class="word-big">${esc(w.w)}</div>`;
     back = `${w.r && w.r !== w.w ? `<div class="reading">${esc(w.r)}</div>` : ""}<div class="meaning" style="margin-top:6px">${esc(w.m)}</div>${breakdown(w)}`;
   } else {
@@ -1454,8 +1469,11 @@ const classLists = () => { const m = new Map(); for (const w of CLASS) m.set(w.l
 function classListStats(list) {
   const now = Date.now(), td = today(); let fresh = 0, due = 0, learned = 0;
   for (const w of CLASS) if (w.list === list) {
-    const c = getCard(cardId("class", w.w));
-    if (c.t === "new") fresh++; else { learned++; if (c.t !== "review" ? c.due <= now + 20 * MIN : dayNum(c.due) <= td) due++; }
+    for (const deck of CLASS_DECKS) {
+      if (deck === "classread" && !hasReadingCard(w)) continue;
+      const c = getCard(cardId(deck, w.w));
+      if (c.t === "new") fresh++; else { learned++; if (c.t !== "review" ? c.due <= now + 20 * MIN : dayNum(c.due) <= td) due++; }
+    }
   }
   return { fresh, due, learned };
 }
@@ -1466,7 +1484,7 @@ function renderClass() {
   const listRows = lists.map(([name, n]) => {
     const st = classListStats(name);
     return `<div class="deck clist">
-      <div><div class="name">${esc(name)}</div><div class="desc">${n} words · ${st.learned} started · ${st.due} due · ${st.fresh} new</div></div>
+      <div><div class="name">${esc(name)}</div><div class="desc">${n} words · cards: ${st.learned} started, ${st.due} due, ${st.fresh} new</div></div>
       <button class="btn primary" data-study="${esc(name)}">Practice</button>
       <button class="btn" data-del="${esc(name)}">Remove</button>
     </div>`;
@@ -1497,8 +1515,8 @@ function renderClass() {
     if (!p.words.length && !p.problems.length) { msg.textContent = "Paste your word list first."; return; }
     classDraft = { ...p, text, list }; render();
   };
-  const all = document.getElementById("cl-all"); if (all) all.onclick = () => startSession(["class"]);
-  main.querySelectorAll("[data-study]").forEach(b => b.onclick = () => startSession(["class"], b.dataset.study));
+  const all = document.getElementById("cl-all"); if (all) all.onclick = () => startSession(CLASS_DECKS);
+  main.querySelectorAll("[data-study]").forEach(b => b.onclick = () => startSession(CLASS_DECKS, b.dataset.study));
   main.querySelectorAll("[data-del]").forEach(b => {
     let armed = false;
     b.onclick = async () => {
