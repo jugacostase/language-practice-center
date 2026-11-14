@@ -55,7 +55,9 @@ CREATE TABLE IF NOT EXISTS daily (
   new_recall INTEGER NOT NULL DEFAULT 0,
   new_readings INTEGER NOT NULL DEFAULT 0,
   new_class  INTEGER NOT NULL DEFAULT 0,
-  new_classread INTEGER NOT NULL DEFAULT 0
+  new_classread INTEGER NOT NULL DEFAULT 0,
+  new_classwrite INTEGER NOT NULL DEFAULT 0,
+  new_wordread INTEGER NOT NULL DEFAULT 0
 );
 -- Study content added on top of the built-in N5 list (e.g. imported from WaniKani).
 -- For an item the app already has, the row only adds extra accepted answers.
@@ -90,7 +92,7 @@ function openDb() {
   run(SCHEMA);
   // Columns added after the first release (schema 3): new-card counters of the newer decks.
   const dailyCols = q("PRAGMA table_info(daily)").map(r => r.name);
-  for (const col of ["new_readings", "new_class", "new_classread"])
+  for (const col of ["new_readings", "new_class", "new_classread", "new_classwrite", "new_wordread"])
     if (!dailyCols.includes(col)) run(`ALTER TABLE daily ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`);
   run("INSERT OR IGNORE INTO meta(key, value) VALUES ('created_ms', ?)", [String(Date.now())]);
   setMeta("schema_version", SCHEMA_VERSION);
@@ -123,7 +125,7 @@ function loadAll() {
 const CARD_COLS = ["card_id", "deck", "item", "state", "step", "due_ms", "interval_days", "ease", "reps", "lapses", "last_review_ms"];
 const REVIEW_COLS = ["ts_ms", "study_day", "card_id", "deck", "item", "grade", "typed", "typed_correct", "answers_json", "answer_ms",
   "state_before", "interval_before", "ease_before", "due_before_ms", "state_after", "interval_after", "ease_after", "due_after_ms"];
-const DAILY_COLS = ["study_day", "date", "reviews", "new_kanji", "new_words", "new_recall", "new_readings", "new_class", "new_classread"];
+const DAILY_COLS = ["study_day", "date", "reviews", "new_kanji", "new_words", "new_recall", "new_readings", "new_class", "new_classread", "new_classwrite", "new_wordread"];
 const upsertSql = (table, cols, key) =>
   `INSERT INTO ${table}(${cols.join(",")}) VALUES (${cols.map(c => "$" + c).join(",")})
    ON CONFLICT(${key}) DO UPDATE SET ${cols.filter(c => c !== key).map(c => `${c}=excluded.${c}`).join(",")}`;
