@@ -365,7 +365,7 @@ function buildContent(rows = []) {
   WORDS.sort((a, b) => a.order - b.order || a.n - b.n);
   // Class words: their own deck, in the order they were pasted. Not tied to kanji unlocks.
   for (const r of extra) if (r.kind === "class" && !CMAP[r.item]) {
-    const w = { w: r.item, r: r.d.r || "", m: r.d.m || "", list: r.d.list || "Class words", ks: [...new Set([...r.item].filter(c => KMAP[c]))], sort: r.sort };
+    const w = { w: r.item, r: r.d.r || (WMAP[r.item] ? WMAP[r.item].r : ""), m: r.d.m || "", list: r.d.list || "Class words", ks: [...new Set([...r.item].filter(c => KMAP[c]))], sort: r.sort };
     CLASS.push(w); CMAP[w.w] = w;
   }
   // Imported kanji show up to three words that use them.
@@ -379,7 +379,8 @@ buildContent();
 const DECKS = [
   { id: "kanji", letter: "k", name: "Kanji meaning", desc: "See the kanji, give its meaning", def: 10 },
   { id: "readings", letter: "y", name: "Kanji reading", desc: "See the kanji, give a reading. Unlocks once you've met the kanji", def: 10 },
-  { id: "words", letter: "w", name: "Words", desc: "Vocabulary that unlocks as you learn its kanji", def: 15 },
+  { id: "words", letter: "w", name: "Words · meaning", desc: "Vocabulary that unlocks as you learn its kanji", def: 15 },
+  { id: "wordread", letter: "v", name: "Words · reading", desc: "See the word, type its reading in kana. Unlocks as you learn its kanji", def: 15 },
   { id: "recall", letter: "r", name: "Kanji writing", desc: "See the meaning, write the kanji by hand, then grade yourself. Unlocks once you've learned the kanji's meaning", def: 5 },
   { id: "class", letter: "c", name: "Class words · meaning", desc: "The vocabulary lists you paste in from your Japanese class", def: 20 },
   { id: "classread", letter: "d", name: "Class words · reading", desc: "Readings of the class words written with kanji", def: 20 },
@@ -391,7 +392,8 @@ const cardId = (deck, key) => DECK_LETTER[deck] + ":" + key; // k:日 meaning, y
 // Cards about the same kanji (or the same word) are "siblings" and are never shown back to back.
 const CLASS_DECKS = ["class", "classread", "classwrite"];
 const isClassDeck = deck => CLASS_DECKS.includes(deck);
-const sibKey = (deck, key) => (deck === "words" || isClassDeck(deck) ? "W:" : "K:") + key;
+const isWordDeck = deck => deck === "words" || deck === "wordread" || isClassDeck(deck); // decks about a word, not a single kanji
+const sibKey = (deck, key) => (isWordDeck(deck) ? "W:" : "K:") + key;
 
 /* ============================== STATE ============================== */
 const LS_KEY = "kanji-srs-v1";
@@ -485,6 +487,7 @@ function deckCards(deck) { // ordered list of {id, key} available (unlocked) in 
   if (isClassDeck(deck)) return CLASS.filter(w => (!classScope || w.list === classScope) && classDeckHas(deck, w)).map(w => ({ id: cardId(deck, w.w), key: w.w }))
     .sort((a, b) => shuffleKey(a.id) - shuffleKey(b.id)); // class words come in a random order, not the pasted one
   if (deck === "words") return WORDS.filter(w => w.ks.every(introduced)).map(w => ({ id: cardId("words", w.w), key: w.w }));
+  if (deck === "wordread") return WORDS.filter(w => w.r && w.ks.every(introduced)).map(w => ({ id: cardId("wordread", w.w), key: w.w }));
   // Writing a kanji from its meaning unlocks once the meaning card has graduated from learning.
   if (deck === "recall") return KANJI.filter(k => { const c = getCard(cardId("kanji", k.k)); return c.t === "review" || c.t === "relearn"; })
     .map(k => ({ id: cardId("recall", k.k), key: k.k }));
@@ -587,6 +590,7 @@ function applyRows(data) {
 const SPLITS = [
   { flag: "splitDone", meta: "split_readings_ms", from: "k:", to: "y:", what: "kanji", applies: () => true },
   { flag: "splitClassDone", meta: "split_class_ms", from: "c:", to: "d:", what: "class word", applies: key => CMAP[key] && hasReadingCard(CMAP[key]) },
+  { flag: "splitWordsDone", meta: "split_words_ms", from: "w:", to: "v:", what: "word", applies: key => WMAP[key] && !!WMAP[key].r },
 ];
 async function splitKanjiCards() {
   let total = 0;
@@ -913,7 +917,7 @@ function planWaniKani(wk, spreadDays) {
     const stage = it.stage || 0; sum.stages[stage]++;
     if (stage < 1) { sum.lessons++; return; }          // not started on WaniKani: stays a new card here
     // A WaniKani kanji gives both a meaning card and a reading card here.
-    for (const deck of it.kind === "kanji" ? ["kanji", "readings"] : ["words"]) {
+    for (const deck of it.kind === "kanji" ? ["kanji", "readings"] : ["words", "wordread"]) {
     const id = cardId(deck, it.ch);
     const mine = state.cards[id];
     if (mine && mine.t !== "new") { sum.kept++; continue; }
@@ -1134,8 +1138,8 @@ function checkMeaning(given, accepted) {
   return { ok: false };
 }
 // Questions per card. Kanji cards ask one thing each (meaning card / reading card); word
-// cards ask reading then meaning. Writing cards (meaning → write the kanji by hand) stay self-graded.
-const wordOf = cur => isClassDeck(cur.deck) ? CMAP[cur.key] : WMAP[cur.key];
+// cards are split the same way (meaning / reading). Writing cards (meaning → write the kanji by hand) stay self-graded.
+const wordOf = cur => isClassDeck(cur.deck) ? CMAP[cur.key] : WMAP[cur.key]; // words, wordread → WMAP
 // Class words written with kanji get a separate reading card; kana-only ones have nothing to read.
 const hasReadingCard = w => !!w.r && hasKanji(w.w);
 // Which class decks a word has a card in: meaning always; reading and writing only when written with kanji.
@@ -1152,9 +1156,9 @@ function questionsFor(cur) {
     return [{ kind: "reading", accept: kanjiReadings(k), show: [k.on, k.kun].filter(Boolean).join(" / "), any: true }];
   }
   const w = wordOf(cur), qs = [];
-  // Class words: the meaning card (class) and the reading card (classread) each ask one thing.
-  if (cur.deck !== "class" && w.r && hasKanji(w.w)) qs.push({ kind: "reading", accept: [kataToHira(w.r), ...(w.acceptR || []).map(kataToHira)].map(r => r.replace(/[〜～~]/g, "")), show: [w.r, ...(w.acceptR || [])].join("、") });
-  if (cur.deck !== "classread" && w.m) qs.push({ kind: "meaning", accept: withExtra(meaningAnswers(w.m), w.acceptM), show: w.m });
+  // Words and class words: the meaning card (words/class) and the reading card (wordread/classread) each ask one thing.
+  if ((cur.deck === "wordread" || cur.deck === "classread") && w.r && hasKanji(w.w)) qs.push({ kind: "reading", accept: [kataToHira(w.r), ...(w.acceptR || []).map(kataToHira)].map(r => r.replace(/[〜～~]/g, "")), show: [w.r, ...(w.acceptR || [])].join("、") });
+  if ((cur.deck === "words" || cur.deck === "class") && w.m) qs.push({ kind: "meaning", accept: withExtra(meaningAnswers(w.m), w.acceptM), show: w.m });
   return qs;
 }
 // Extra accepted meanings (WaniKani alternatives and your own synonyms).
@@ -1183,7 +1187,7 @@ function answerCard(cur, misses) {
   const alts = list => list && list.length ? `<div class="alt">Also accepted: ${esc(list.join(", "))}</div>` : "";
   const join = s => (s || "").split("、").filter(Boolean).join("、 ");
   let m, r, extra = "";
-  if (cur.deck === "words" || isClassDeck(cur.deck)) {
+  if (isWordDeck(cur.deck)) {
     const w = wordOf(cur);
     m = sec("meaning", "Meaning", `<div class="main">${esc(w.m)}</div>${alts(w.acceptM)}`);
     r = w.r && w.r !== w.w ? sec("reading", "Reading", `<div class="main" style="font-family:'Noto Sans JP',sans-serif">${esc([w.r, ...(w.acceptR || [])].join("、 "))}</div>`) : "";
@@ -1208,7 +1212,7 @@ function breakdown(w) {
   return w.ks.length ? `<div class="breakdown">${w.ks.map(ch => `<div class="bk"><span>${ch}</span>${esc(KMAP[ch].meaning)}</div>`).join("")}</div>` : "";
 }
 function speakText(cur) {
-  if (cur.deck === "words" || isClassDeck(cur.deck)) { const w = wordOf(cur); return w.r || w.w; }
+  if (isWordDeck(cur.deck)) { const w = wordOf(cur); return w.r || w.w; }
   const k = KMAP[cur.key]; return k.examples[0] ? k.examples[0].r : "";
 }
 function resultsHtml(s) {
@@ -1240,8 +1244,9 @@ function renderStudy() {
     const w = wordOf(cur); tag = `Class · ${esc(w.list)} · writing`;
     front = `<div class="prompt">${esc(w.m)}</div>${w.r ? `<div class="reading" style="text-align:center">${esc(w.r)}</div>` : ""}<div class="sub">Write the word in kanji on paper, then show the answer and grade yourself.</div>`;
     back = `<div class="word-big">${esc(w.w)}</div>${breakdown(w)}`;
-  } else if (cur.deck === "words" || isClassDeck(cur.deck)) {
-    const w = wordOf(cur); tag = isClassDeck(cur.deck) ? `Class · ${esc(w.list)} · ${cur.deck === "class" ? "meaning" : "reading"}` : "Word · reading & meaning";
+  } else if (isWordDeck(cur.deck)) {
+    const w = wordOf(cur), what = cur.deck === "class" || cur.deck === "words" ? "meaning" : "reading";
+    tag = isClassDeck(cur.deck) ? `Class · ${esc(w.list)} · ${what}` : `Word · ${what}`;
     front = `<div class="word-big">${esc(w.w)}</div>`;
     back = `${w.r && w.r !== w.w ? `<div class="reading">${esc(w.r)}</div>` : ""}<div class="meaning" style="margin-top:6px">${esc(w.m)}</div>${breakdown(w)}`;
   } else {
@@ -1545,8 +1550,9 @@ function renderClass() {
   const defName = `Class ${new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
   const listRows = lists.map(([name, n]) => {
     const st = classListStats(name);
+    const noRead = CLASS.filter(w => w.list === name && hasKanji(w.w) && !w.r).length;
     return `<div class="deck clist">
-      <div><div class="name">${esc(name)}</div><div class="desc">${n} words · cards: ${st.learned} started, ${st.due} due, ${st.fresh} new</div></div>
+      <div><div class="name">${esc(name)}</div><div class="desc">${n} words · cards: ${st.learned} started, ${st.due} due, ${st.fresh} new${noRead ? ` · <span class="warnc">${noRead} with kanji have no reading yet, tap Edit to add it</span>` : ""}</div></div>
       <button class="btn primary" data-study="${esc(name)}">Practice</button>
       <button class="btn" data-edit="${esc(name)}">Edit</button>
       <button class="btn" data-del="${esc(name)}">Remove</button>
