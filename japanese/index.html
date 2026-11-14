@@ -92,7 +92,14 @@ hr.div{width:100%;border:none;border-top:1px dashed var(--line);margin:20px 0}
 .ex .lock{font-size:11px;color:var(--muted);margin-left:auto}
 .breakdown{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
 .bk{border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px}
+button.bk{background:var(--panel);color:var(--ink);font-family:inherit;line-height:1.3;max-width:11em;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.bk:active{background:color-mix(in srgb,var(--accent) 12%,var(--panel))}
 .bk span{font-family:var(--jp);font-size:22px;display:block}
+.bk .bkm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+/* the kanji of the card just graded, under the result note: small enough to fit above the keyboard */
+.flashks{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.flashks .bk{display:flex;align-items:center;gap:6px;padding:4px 10px;min-height:40px;max-width:12em}
+.flashks .bk span{font-size:20px;display:inline}
 .answer{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
 .answer button{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 4px;font-weight:600}
 .answer button small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:2px}
@@ -147,8 +154,12 @@ hr.div{width:100%;border:none;border-top:1px dashed var(--line);margin:20px 0}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px}
 .tile{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--jp);font-size:28px;background:var(--tile-new)}
 .tile.learn{background:var(--tile-learn)} .tile.young{background:var(--tile-young)} .tile.mature{background:var(--tile-mature)}
-.modal-bg{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
-.modal{max-width:520px;width:100%;max-height:90vh;overflow:auto;position:relative;text-align:center}
+.modal-bg{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;padding:16px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom));z-index:10}
+.modal{max-width:520px;width:100%;max-height:90vh;max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;position:relative;text-align:center}
+.modal .kanji-big{font-size:96px}
+.modal .alt{color:var(--muted);font-size:14px;margin-top:2px}
+.modal h3{margin:16px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;text-align:left}
+.modal .examples{margin-top:4px}
 .modal .close{position:absolute;top:8px;right:8px;border:none;background:none;font-size:20px;color:var(--muted)}
 .cardstats{font-size:12px;color:var(--muted);margin-top:12px}
 /* settings */
@@ -1171,7 +1182,7 @@ function nextCard() { const p = pickNext(session.decks); session.cur = p.none ? 
 
 function kanjiInfo(k, opts = {}) {
   const exs = k.examples.map(e => {
-    const w = WMAP[e.w]; const unlocked = w.ks.every(introduced);
+    const w = WMAP[e.w]; const unlocked = !w || w.ks.every(introduced);
     return `<div class="ex"><span class="w">${esc(e.w)}</span><span class="r">${esc(e.r)}</span><span>${esc(e.m)}</span>${opts.lock && !unlocked ? '<span class="lock">locked</span>' : ""}</div>`;
   }).join("");
   return `<div class="meaning">${esc(k.meaning)}</div>
@@ -1209,7 +1220,11 @@ function answerCard(cur, misses) {
   return `<div class="fbcard">${head}<div class="fbbody">${missed("reading") && !missed("meaning") ? r + m : m + r}${extra}</div></div>`;
 }
 function breakdown(w) {
-  return w.ks.length ? `<div class="breakdown">${w.ks.map(ch => `<div class="bk"><span>${ch}</span>${esc(KMAP[ch].meaning)}</div>`).join("")}</div>` : "";
+  return w.ks.length ? `<div class="breakdown">${kanjiTiles(w.ks)}</div>` : "";
+}
+// Kanji tiles (kanji + meaning). Tapping one opens its details, see openKanji().
+function kanjiTiles(ks) {
+  return ks.filter(ch => KMAP[ch]).map(ch => `<button type="button" class="bk" data-kinfo="${esc(ch)}" title="Details for ${esc(ch)}" aria-label="${esc(ch)}: ${esc(KMAP[ch].meaning)}. Show details"><span>${esc(ch)}</span><span class="bkm">${esc(KMAP[ch].meaning)}</span></button>`).join("");
 }
 function speakText(cur) {
   if (isWordDeck(cur.deck)) { const w = wordOf(cur); return w.r || w.w; }
@@ -1264,7 +1279,8 @@ function renderStudy() {
   const gradeBtn = (g, cls, label) => `<button class="${cls}${s.suggest === g ? " sug" : ""}" data-g="${g}">${label}<small>${previewLabel(c, g)} · ${g}</small></button>`;
   const anyWrong = s.res.some(r => !r.ok);
   // One-off note about the card just graded automatically (shown once, fades out).
-  const flash = s.flash ? `<div class="flash ${s.flash.ok ? "ok" : "bad"}">${s.flash.ok ? "✓ Correct" : "✗ Again"} · ${esc(s.flash.item)} back in ${s.flash.ivl} · <button class="linkbtn" id="flashundo" style="color:inherit">undo</button></div>` : "";
+  // Its kanji follow as tiles (also after a right answer), tap one for its details.
+  const flash = s.flash ? `<div class="flash ${s.flash.ok ? "ok" : "bad"}">${s.flash.ok ? "✓ Correct" : "✗ Again"} · ${esc(s.flash.item)} back in ${s.flash.ivl} · <button class="linkbtn" id="flashundo" style="color:inherit">undo</button></div>${s.flash.ks.length ? `<div class="flashks">${kanjiTiles(s.flash.ks)}</div>` : ""}` : "";
   s.flash = null;
   let below;
   if (asking) {
@@ -1378,7 +1394,7 @@ function answer(g) {
   s.undo[s.undo.length - 1].ts = now;
   if (cur.c.t === "new") state.daily.newDone[cur.deck] = (state.daily.newDone[cur.deck] || 0) + 1;
   const before = cur.c, after = schedule(cur.c, g, now, false);
-  s.flash = autoGrading(s) ? { ok: g >= 3, item: cur.key, ivl: fmtIvl(after.due - now) } : null;
+  s.flash = autoGrading(s) ? { ok: g >= 3, item: cur.key, ivl: fmtIvl(after.due - now), ks: isWordDeck(cur.deck) ? wordOf(cur).ks : [cur.key] } : null;
   state.cards[cur.id] = after;
   state.daily.reviews++; state.history[today()] = (state.history[today()] || 0) + 1;
   const typed = s.res.length > 0;
@@ -1406,6 +1422,7 @@ function undo() {
 }
 document.addEventListener("keydown", e => {
   if (view !== "study" || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (document.getElementById("mbg")) return; // a popup is open, see openKanji()
   if (["INPUT", "TEXTAREA"].includes(document.activeElement && document.activeElement.tagName)) return;
   const s = session; if (!s) return;
   if (e.key === " " || e.key === "Enter") {
@@ -1639,19 +1656,42 @@ function cardLine(label, c) {
   const next = c.t === "review" ? `next in ${fmtIvl(Math.max(0, c.due - Date.now()))}` : "learning";
   return `${label}: ${next}, ${c.r} reviews, ${c.l || 0} lapses, ease ${Math.round(c.e * 100)}%`;
 }
+// Kanji details popup, from the Kanji tab and from the kanji tiles shown while studying.
+// On a phone, opening it closes the keyboard so the popup gets the whole screen; closing
+// it puts the cursor back in the answer box (which brings the keyboard back).
 function openKanji(ch) {
-  const k = KMAP[ch]; const root = document.getElementById("modal-root");
-  root.innerHTML = `<div class="modal-bg" id="mbg"><div class="panel modal">
+  const k = KMAP[ch]; if (!k) return;
+  const root = document.getElementById("modal-root");
+  const refocus = view === "study" ? document.getElementById("ans") : null; // the answer box, if a question is open
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  const exWords = new Set(k.examples.map(e => e.w));
+  const cls = CLASS.filter(w => w.ks.includes(ch) && !exWords.has(w.w)).slice(0, 8);
+  const more = WORDS.filter(w => w.ks.includes(ch) && !exWords.has(w.w) && !cls.some(c => c.w === w.w)).slice(0, 5);
+  const wordRows = list => `<div class="examples">${list.map(w => `<div class="ex"><span class="w">${esc(w.w)}</span><span class="r">${esc(w.r || "")}</span><span>${esc(w.m || "")}</span></div>`).join("")}</div>`;
+  root.innerHTML = `<div class="modal-bg" id="mbg"><div class="panel modal" role="dialog" aria-modal="true" aria-label="Kanji ${esc(ch)}">
     <button class="close" id="mclose" aria-label="Close">✕</button>
-    <div class="kanji-big">${k.k}</div>${kanjiInfo(k, { lock: true })}
+    <div class="kanji-big">${esc(k.k)}</div>${kanjiInfo(k, { lock: true })}
+    ${k.acceptM && k.acceptM.length ? `<div class="alt">Also accepted: ${esc(k.acceptM.join(", "))}</div>` : ""}
+    ${k.level ? `<div class="alt">WaniKani level ${esc(String(k.level))}</div>` : ""}
+    ${cls.length ? `<h3>In your class words</h3>${wordRows(cls)}` : ""}
+    ${more.length ? `<h3>More words</h3>${wordRows(more)}` : ""}
     <div class="cardstats">${cardLine("Meaning card", getCard(cardId("kanji", ch)))}<br>${cardLine("Reading card", getCard(cardId("readings", ch)))}<br>${cardLine("Writing card", getCard(cardId("recall", ch)))}</div>
-    <button class="btn" id="mspeak" style="margin-top:12px">🔊 Hear examples</button>
+    ${k.examples.length ? '<button class="btn" id="mspeak" style="margin-top:12px">🔊 Hear examples</button>' : ""}
   </div></div>`;
-  const close = () => root.innerHTML = "";
+  const close = () => {
+    root.innerHTML = ""; document.removeEventListener("keydown", onKey, true);
+    if (refocus && refocus.isConnected) refocus.focus({ preventScroll: true });
+  };
+  const onKey = e => { if (e.key === "Escape" || e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); close(); } };
+  document.addEventListener("keydown", onKey, true);
   document.getElementById("mclose").onclick = close;
   document.getElementById("mbg").onclick = e => { if (e.target.id === "mbg") close(); };
-  document.getElementById("mspeak").onclick = () => speak(k.examples.map(e => e.r).join("、"));
+  const ms = document.getElementById("mspeak"); if (ms) ms.onclick = () => speak(k.examples.map(e => e.r).join("、"));
 }
+// Any kanji tile (data-kinfo) opens the popup. Keeping the tap from moving focus means the
+// answer box is still focused when openKanji() looks, so it can be refocused on close.
+document.addEventListener("pointerdown", e => { if (e.target.closest && e.target.closest("[data-kinfo]")) e.preventDefault(); });
+document.addEventListener("click", e => { const t = e.target.closest && e.target.closest("[data-kinfo]"); if (t) { e.preventDefault(); openKanji(t.dataset.kinfo); } });
 
 function renderSettings() {
   const np = state.settings.newPerDay;
