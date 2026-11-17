@@ -219,6 +219,7 @@ textarea.cl-text{font-family:"Noto Sans JP",system-ui,sans-serif;font-size:15px;
 </div>
 <div id="modal-root"></div>
 
+<script src="kanji-dict.js"></script>
 <script>
 /* ============================== DATA ==============================
    kanji | meaning | on'yomi | kun'yomi | examples (word:reading:meaning;...)
@@ -333,6 +334,15 @@ const KANJI = [], KMAP = {}, WORDS = [], WMAP = {}, CLASS = [], CMAP = {};
 // Built-in list first, then content stored in the database's `items` table (e.g. imported
 // from WaniKani), in its own order. An imported item the app already has only adds
 // extra accepted answers. Rebuilt whenever the database is (re)loaded.
+// Every kanji in a word, in order, for its breakdown. `ks` holds only the ones this app
+// teaches (they drive unlocks); `parts` also has the rest, explained by KANJI_DICT.
+const kanjiParts = w => [...new Set([...w].filter(c => /[\u3400-\u9fff\uf900-\ufaff]/.test(c)))];
+// A kanji's details: the studied entry when there is one, else the dictionary's.
+function kanjiEntry(ch) {
+  if (KMAP[ch]) return KMAP[ch];
+  const d = typeof KANJI_DICT !== "undefined" && KANJI_DICT[ch];
+  return d ? { k: ch, meaning: d[0], on: d[1], kun: d[2], examples: [], dict: true } : null;
+}
 function buildContent(rows = []) {
   KANJI.length = 0; WORDS.length = 0;
   for (const k in KMAP) delete KMAP[k];
@@ -364,7 +374,7 @@ function buildContent(rows = []) {
     const ks = [...new Set([...w].filter(c => KMAP[c]))];
     if (!ks.length) return null;
     const order = Math.max(...ks.map(c => KMAP[c].idx));
-    const word = { w, r, m, ks, order, n: WORDS.length, src };
+    const word = { w, r, m, ks, parts: kanjiParts(w), order, n: WORDS.length, src };
     WORDS.push(word); WMAP[w] = word; return word;
   };
   KANJI.forEach(kj => kj.examples.forEach(e => { if (!WMAP[e.w]) addWord(e.w, e.r, e.m, "core"); }));
@@ -376,7 +386,7 @@ function buildContent(rows = []) {
   WORDS.sort((a, b) => a.order - b.order || a.n - b.n);
   // Class words: their own deck, in the order they were pasted. Not tied to kanji unlocks.
   for (const r of extra) if (r.kind === "class" && !CMAP[r.item]) {
-    const w = { w: r.item, r: r.d.r || (WMAP[r.item] ? WMAP[r.item].r : ""), m: r.d.m || "", list: r.d.list || "Class words", ks: [...new Set([...r.item].filter(c => KMAP[c]))], sort: r.sort };
+    const w = { w: r.item, r: r.d.r || (WMAP[r.item] ? WMAP[r.item].r : ""), m: r.d.m || "", list: r.d.list || "Class words", ks: [...new Set([...r.item].filter(c => KMAP[c]))], parts: kanjiParts(r.item), sort: r.sort };
     CLASS.push(w); CMAP[w.w] = w;
   }
   // Imported kanji show up to three words that use them.
@@ -1220,11 +1230,12 @@ function answerCard(cur, misses) {
   return `<div class="fbcard">${head}<div class="fbbody">${missed("reading") && !missed("meaning") ? r + m : m + r}${extra}</div></div>`;
 }
 function breakdown(w) {
-  return w.ks.length ? `<div class="breakdown">${kanjiTiles(w.ks)}</div>` : "";
+  const ps = (w.parts || w.ks).filter(kanjiEntry);
+  return ps.length ? `<div class="breakdown">${kanjiTiles(ps)}</div>` : "";
 }
 // Kanji tiles (kanji + meaning). Tapping one opens its details, see openKanji().
 function kanjiTiles(ks) {
-  return ks.filter(ch => KMAP[ch]).map(ch => `<button type="button" class="bk" data-kinfo="${esc(ch)}" title="Details for ${esc(ch)}" aria-label="${esc(ch)}: ${esc(KMAP[ch].meaning)}. Show details"><span>${esc(ch)}</span><span class="bkm">${esc(KMAP[ch].meaning)}</span></button>`).join("");
+  return ks.map(kanjiEntry).filter(Boolean).map(k => `<button type="button" class="bk" data-kinfo="${esc(k.k)}" title="Details for ${esc(k.k)}" aria-label="${esc(k.k)}: ${esc(k.meaning)}. Show details"><span>${esc(k.k)}</span><span class="bkm">${esc(k.dict ? k.meaning.split(", ")[0] : k.meaning)}</span></button>`).join(""); // dictionary kanji: first sense on the tile, all of them in the popup
 }
 function speakText(cur) {
   if (isWordDeck(cur.deck)) { const w = wordOf(cur); return w.r || w.w; }
@@ -1394,7 +1405,7 @@ function answer(g) {
   s.undo[s.undo.length - 1].ts = now;
   if (cur.c.t === "new") state.daily.newDone[cur.deck] = (state.daily.newDone[cur.deck] || 0) + 1;
   const before = cur.c, after = schedule(cur.c, g, now, false);
-  s.flash = autoGrading(s) ? { ok: g >= 3, item: cur.key, ivl: fmtIvl(after.due - now), ks: isWordDeck(cur.deck) ? wordOf(cur).ks : [cur.key] } : null;
+  s.flash = autoGrading(s) ? { ok: g >= 3, item: cur.key, ivl: fmtIvl(after.due - now), ks: isWordDeck(cur.deck) ? (wordOf(cur).parts || wordOf(cur).ks) : [cur.key] } : null;
   state.cards[cur.id] = after;
   state.daily.reviews++; state.history[today()] = (state.history[today()] || 0) + 1;
   const typed = s.res.length > 0;
@@ -1660,13 +1671,13 @@ function cardLine(label, c) {
 // On a phone, opening it closes the keyboard so the popup gets the whole screen; closing
 // it puts the cursor back in the answer box (which brings the keyboard back).
 function openKanji(ch) {
-  const k = KMAP[ch]; if (!k) return;
+  const k = kanjiEntry(ch); if (!k) return;
   const root = document.getElementById("modal-root");
   const refocus = view === "study" ? document.getElementById("ans") : null; // the answer box, if a question is open
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   const exWords = new Set(k.examples.map(e => e.w));
-  const cls = CLASS.filter(w => w.ks.includes(ch) && !exWords.has(w.w)).slice(0, 8);
-  const more = WORDS.filter(w => w.ks.includes(ch) && !exWords.has(w.w) && !cls.some(c => c.w === w.w)).slice(0, 5);
+  const cls = CLASS.filter(w => w.parts.includes(ch) && !exWords.has(w.w)).slice(0, 8);
+  const more = WORDS.filter(w => w.parts.includes(ch) && !exWords.has(w.w) && !cls.some(c => c.w === w.w)).slice(0, 5);
   const wordRows = list => `<div class="examples">${list.map(w => `<div class="ex"><span class="w">${esc(w.w)}</span><span class="r">${esc(w.r || "")}</span><span>${esc(w.m || "")}</span></div>`).join("")}</div>`;
   root.innerHTML = `<div class="modal-bg" id="mbg"><div class="panel modal" role="dialog" aria-modal="true" aria-label="Kanji ${esc(ch)}">
     <button class="close" id="mclose" aria-label="Close">✕</button>
@@ -1675,7 +1686,8 @@ function openKanji(ch) {
     ${k.level ? `<div class="alt">WaniKani level ${esc(String(k.level))}</div>` : ""}
     ${cls.length ? `<h3>In your class words</h3>${wordRows(cls)}` : ""}
     ${more.length ? `<h3>More words</h3>${wordRows(more)}` : ""}
-    <div class="cardstats">${cardLine("Meaning card", getCard(cardId("kanji", ch)))}<br>${cardLine("Reading card", getCard(cardId("readings", ch)))}<br>${cardLine("Writing card", getCard(cardId("recall", ch)))}</div>
+    ${k.dict ? `<div class="alt">Not in your kanji decks yet. Meaning from KANJIDIC.</div>` : ""}
+    ${k.dict ? "" : `<div class="cardstats">${cardLine("Meaning card", getCard(cardId("kanji", ch)))}<br>${cardLine("Reading card", getCard(cardId("readings", ch)))}<br>${cardLine("Writing card", getCard(cardId("recall", ch)))}</div>`}
     ${k.examples.length ? '<button class="btn" id="mspeak" style="margin-top:12px">🔊 Hear examples</button>' : ""}
   </div></div>`;
   const close = () => {

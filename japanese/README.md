@@ -108,3 +108,7 @@ rev = pd.read_sql("SELECT * FROM reviews", con)
 rev["ts"] = pd.to_datetime(rev.ts_ms, unit="ms")
 rev.groupby("deck").grade.apply(lambda g: (g > 1).mean())   # retention by deck
 ```
+
+## Credits
+
+`kanji-dict.js` (meanings and readings used for the kanji breakdown of words the app does not teach) comes from [KANJIDIC2](https://www.edrdg.org/wiki/index.php/KANJIDIC_Project) by the Electronic Dictionary Research and Development Group, used under [CC BY-SA 4.0](https://www.edrdg.org/edrdg/licence.html), via [kanji-data](https://github.com/davidluzgouveia/kanji-data).

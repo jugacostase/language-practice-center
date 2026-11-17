@@ -1,10 +1,10 @@
 // Offline support: the app shell (HTML, SQLite engine, icons) is cached on install and
 // served from cache first. Google Fonts are cached the first time they load.
 // Bump VERSION whenever any file changes so phones pick up the update.
-const VERSION = "kanji-srs-v14";
+const VERSION = "kanji-srs-v15";
 const FONT_CACHE = "kanji-srs-fonts";
 const SHELL = [
-  "./", "./index.html", "./db-worker.js", "./manifest.webmanifest",
+  "./", "./index.html", "./kanji-dict.js", "./db-worker.js", "./manifest.webmanifest",
   "./sqlite/sqlite3.mjs", "./sqlite/sqlite3.wasm",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png",
   "./icons/maskable-192.png", "./icons/maskable-512.png",
