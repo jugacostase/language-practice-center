@@ -58,6 +58,8 @@ nav button.on{border-color:var(--line);background:var(--panel);color:var(--ink)}
 .stat small{color:var(--muted);font-size:12px}
 .decks{display:flex;flex-direction:column;gap:8px}
 .deck{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.deck.off{opacity:.55}
+.wtoggle{margin:14px 2px 0}
 .deck .name{font-weight:600}
 .deck .desc{font-size:13px;color:var(--muted)}
 .counts{margin-left:auto;display:flex;gap:12px;font-variant-numeric:tabular-nums;font-weight:600}
@@ -420,7 +422,7 @@ const sibKey = (deck, key) => (isWordDeck(deck) ? "W:" : "K:") + key;
 const LS_KEY = "kanji-srs-v1";
 function freshState() {
   return { v: 1, updatedAt: 0, cards: {}, daily: { day: -1, newDone: {}, reviews: 0 }, history: {},
-    settings: { newPerDay: Object.fromEntries(DECKS.map(d => [d.id, d.def])), autoSpeak: false, typeMode: true, autoGrade: true, backupEveryDays: 3, jpFont: "klee" } };
+    settings: { newPerDay: Object.fromEntries(DECKS.map(d => [d.id, d.def])), autoSpeak: false, typeMode: true, autoGrade: true, writing: true, backupEveryDays: 3, jpFont: "klee" } };
 }
 function normalize(s) {
   const f = freshState();
@@ -502,7 +504,13 @@ function shuffleKey(id) {
   return (h >>> 0) / 4294967296;
 }
 let classScope = null; // a class list name to study only that list, or null for every class word
+// Writing cards (draw the kanji by hand) can be switched off; their progress is kept and they
+// come back where they left off when switched on again.
+const WRITING_DECKS = ["recall", "classwrite"];
+const writingOff = () => state.settings.writing === false;
+function setWriting(on) { state.settings.writing = on; store.settings(); render(); }
 function deckCards(deck) { // ordered list of {id, key} available (unlocked) in this deck
+  if (WRITING_DECKS.includes(deck) && writingOff()) return [];
   if (deck === "kanji") return KANJI.map(k => ({ id: cardId("kanji", k.k), key: k.k }));
   if (deck === "readings") return KANJI.filter(k => introduced(k.k)).map(k => ({ id: cardId("readings", k.k), key: k.k }));
   if (isClassDeck(deck)) return CLASS.filter(w => (!classScope || w.list === classScope) && classDeckHas(deck, w)).map(w => ({ id: cardId(deck, w.w), key: w.w }))
@@ -1048,8 +1056,9 @@ function renderHome() {
   const totals = { nw: 0, lr: 0, due: 0 };
   const rows = DECKS.map(d => {
     const c = deckCounts(d.id); totals.nw += c.nw; totals.lr += c.lr; totals.due += c.due;
-    const extra = d.id === "words" && lockedWords() ? ` · ${lockedWords()} still locked` : d.id === "class" && !CLASS.length ? ` · paste a list in the <b>Class</b> tab` : d.id === "class" ? ` · ${CLASS.length} words` : "";
-    return `<div class="panel deck">
+    const off = WRITING_DECKS.includes(d.id) && writingOff();
+    const extra = off ? ` · <b>turned off</b>` : d.id === "words" && lockedWords() ? ` · ${lockedWords()} still locked` : d.id === "class" && !CLASS.length ? ` · paste a list in the <b>Class</b> tab` : d.id === "class" ? ` · ${CLASS.length} words` : "";
+    return `<div class="panel deck${off ? " off" : ""}">
       <div><div class="name">${d.name}</div><div class="desc">${d.desc}${extra}</div></div>
       <div class="counts"><span class="c-new" title="New">${c.nw}</span><span class="c-learn" title="Learning">${c.lr}</span><span class="c-due" title="Due">${c.due}</span></div>
       <button class="btn" data-deck="${d.id}" ${c.nw + c.lr + c.due ? "" : "disabled"}>Study</button>
@@ -1064,10 +1073,12 @@ function renderHome() {
       <div class="stat"><b>${matureK}</b><small>Kanji mature (21d+)</small></div>
     </div>
     <button class="btn primary big" id="studyAll" ${any ? "" : "disabled"}>${any ? `Study all · <span>${totals.nw} new, ${totals.lr} learning, ${totals.due} due</span>` : "All done for today 🎉"}</button>
+    <div class="row wtoggle"><label for="wtoggle">✍️ Writing cards<br><span class="hint">Cards where you draw the kanji by hand. Turn them off for a while and they wait, progress kept.</span></label><input type="checkbox" id="wtoggle" ${writingOff() ? "" : "checked"}></div>
     <div class="decks">${rows}</div>
     <p class="hint" style="margin-top:16px">Counts are <span class="c-new">new</span> · <span class="c-learn">learning</span> · <span class="c-due">due</span>. Type your answer and press <b>Enter</b>; romaji turns into kana for readings. Cards are graded from your answers (turn that off in Settings to grade yourself with <b>1–4</b>). <b>Enter</b> moves on, <b>Z</b> undoes the last card, <b>S</b> speaks.</p>`;
   document.getElementById("studyAll").onclick = () => startSession(DECKS.map(d => d.id));
   wireBackupBanner();
+  document.getElementById("wtoggle").onchange = e => setWriting(e.target.checked);
   main.querySelectorAll("[data-deck]").forEach(b => b.onclick = () => startSession([b.dataset.deck]));
 }
 
@@ -1314,7 +1325,8 @@ function renderStudy() {
         ${anyWrong ? ' <button class="linkbtn" id="override">I was right</button>' : ""}</p>` : ""}
       <div class="answer">${gradeBtn(1, "a", "Again")}${gradeBtn(2, "h", "Hard")}${gradeBtn(3, "g", "Good")}${gradeBtn(4, "e", "Easy")}</div>`;
   } else {
-    below = `<button class="btn primary big" id="show">Show answer <span class="kbd" style="color:inherit;opacity:.8">· Space</span></button>`;
+    below = `<button class="btn primary big" id="show">Show answer <span class="kbd" style="color:inherit;opacity:.8">· Space</span></button>
+      ${WRITING_DECKS.includes(cur.deck) ? `<p class="hint" style="text-align:center;margin:8px 0 0"><button class="linkbtn" id="woff">Skip writing cards for now</button> <span>(turn them back on from Decks)</span></p>` : ""}`;
   }
   main.innerHTML = `
     <div class="studybar">
@@ -1338,6 +1350,7 @@ function renderStudy() {
   // Speaking the reading before it's answered would give it away.
   document.getElementById("speak").onclick = () => { if (s.shown) speak(speakText(cur)); };
   const show = document.getElementById("show"); if (show) show.onclick = reveal;
+  const woff = document.getElementById("woff"); if (woff) woff.onclick = () => { state.settings.writing = false; store.settings(); nextCard(); };
   const fw = document.getElementById("fixword");
   if (fw) fw.onclick = () => { classEdit = wordOf(cur).list; go("class"); const el = document.getElementById("cl-editor"); if (el) el.scrollIntoView({ block: "start" }); };
   const hb = document.getElementById("hintbtn"); if (hb) hb.onclick = () => { s.hint = true; render(); };
@@ -1527,7 +1540,7 @@ function classListStats(list) {
   const now = Date.now(), td = today(); let fresh = 0, due = 0, learned = 0;
   for (const w of CLASS) if (w.list === list) {
     for (const deck of CLASS_DECKS) {
-      if (!classDeckHas(deck, w)) continue;
+      if (!classDeckHas(deck, w) || (deck === "classwrite" && writingOff())) continue;
       const c = getCard(cardId(deck, w.w));
       if (c.t === "new") fresh++; else { learned++; if (c.t !== "review" ? c.due <= now + 20 * MIN : dayNum(c.due) <= td) due++; }
     }
@@ -1711,6 +1724,7 @@ function renderSettings() {
     <h2 style="margin-top:0">New cards per day</h2>
     ${DECKS.map(d => `<div class="row"><label for="np-${d.id}">${d.name}<br><span class="hint">${d.desc}</span></label><input type="number" min="0" max="200" id="np-${d.id}" value="${np[d.id]}"></div>`).join("")}
     <div class="row"><label for="typemode">Type your answers<br><span class="hint">Kanji meaning and reading cards ask for that one answer, word cards ask for the reading and the meaning; the app checks them and grades for you. Turn off to flip and grade yourself, like Anki.</span></label><input type="checkbox" id="typemode" ${state.settings.typeMode ? "checked" : ""}></div>
+    <div class="row"><label for="writing-set">Writing cards<br><span class="hint">Kanji writing and class word writing, where you draw the kanji by hand and grade yourself. Turned off, they don't come up; your progress on them is kept.</span></label><input type="checkbox" id="writing-set" ${writingOff() ? "" : "checked"}></div>
     <div class="row"><label for="autograde">Grade automatically<br><span class="hint">Like WaniKani: right answers count as Good and go straight to the next card, misses count as Again. Turn off to see the answer and pick Again, Hard, Good or Easy yourself. Writing cards always use the buttons.</span></label><input type="checkbox" id="autograde" ${state.settings.autoGrade ? "checked" : ""}></div>
     <div class="row"><label for="autospeak">Speak the reading when the answer is shown</label><input type="checkbox" id="autospeak" ${state.settings.autoSpeak ? "checked" : ""}></div>
     <h2>Kanji font</h2>
@@ -1732,6 +1746,7 @@ function renderSettings() {
     state.settings.newPerDay[d.id] = v; store.settings();
   });
   document.getElementById("typemode").onchange = e => { state.settings.typeMode = e.target.checked; store.settings(); };
+  document.getElementById("writing-set").onchange = e => { state.settings.writing = e.target.checked; store.settings(); };
   document.getElementById("autograde").onchange = e => { state.settings.autoGrade = e.target.checked; store.settings(); };
   document.getElementById("autospeak").onchange = e => { state.settings.autoSpeak = e.target.checked; store.settings(); };
   if (!document.getElementById("fontpreview")) { // just the three sample characters of each font
